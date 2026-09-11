@@ -53,7 +53,38 @@ def main():
             for port in (be,fe):
                 with socket.socket() as s:
                     assert s.connect_ex(('127.0.0.1',port))!=0, 'Owned server still listening.'
-            print('PASS: configurable ports, live service, conflict refusal, SIGINT, and reaped child processes.')
+
+            # Restart immediately on the same ports. Browser connections above left
+            # entries in TIME_WAIT, which a probe without SO_REUSEADDR misreads as
+            # an occupied port and refuses -- the ordinary edit/restart workflow.
+            proc = subprocess.Popen(['./start.sh'], cwd=ROOT, env=env, stdout=log, stderr=log, start_new_session=True)
+            deadline = time.monotonic()+35
+            while time.monotonic()<deadline:
+                assert proc.poll() is None, 'Restart on the same ports was refused after a clean shutdown.'
+                try:
+                    with urllib.request.urlopen(f'http://127.0.0.1:{fe}', timeout=.5) as r:
+                        assert r.status==200
+                    break
+                except (OSError,TimeoutError):
+                    time.sleep(.2)
+            else:
+                raise AssertionError('Restarted frontend did not become ready.')
+
+            # Closing the terminal sends SIGHUP. Children are session leaders, so an
+            # untrapped SIGHUP would leave them running forever holding these ports.
+            children=[int(p) for p in Path(f'/proc/{proc.pid}/task/{proc.pid}/children').read_text().split()]
+            assert len(children)==2, f'Expected exactly 2 children, got {children}'
+            proc.send_signal(signal.SIGHUP)
+            assert proc.wait(timeout=15)==0
+            deadline=time.monotonic()+10
+            while time.monotonic()<deadline and any(Path(f'/proc/{pid}').exists() for pid in children):
+                time.sleep(.2)
+            assert all(not Path(f'/proc/{pid}').exists() for pid in children), 'SIGHUP stranded owned children.'
+            for port in (be,fe):
+                with socket.socket() as s:
+                    assert s.connect_ex(('127.0.0.1',port))!=0, 'Server survived SIGHUP.'
+            print('PASS: configurable ports, live service, conflict refusal, SIGINT, '
+                  'same-port restart, SIGHUP cleanup, and reaped child processes.')
         finally:
             if proc and proc.poll() is None:
                 proc.send_signal(signal.SIGTERM)

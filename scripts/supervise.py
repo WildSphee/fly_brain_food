@@ -1,5 +1,6 @@
 """Own the app's two process groups; never search for or kill other users' PIDs."""
 import os
+from contextlib import suppress
 from pathlib import Path
 import signal
 import socket
@@ -21,8 +22,10 @@ def main() -> int:
         nonlocal stopping
         stopping = True
 
-    signal.signal(signal.SIGINT, stop)
-    signal.signal(signal.SIGTERM, stop)
+    # SIGHUP matters: children are session leaders, so a closed terminal would
+    # otherwise leave them running forever holding the configured ports.
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, stop)
     if settings.backend_port == settings.frontend_port:
         print('BACKEND_PORT and FRONTEND_PORT must be different.', file=sys.stderr)
         return 1
@@ -30,6 +33,7 @@ def main() -> int:
     for port in (settings.backend_port, settings.frontend_port):
         try:
             with socket.socket() as sock:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 sock.bind(('0.0.0.0', port))
         except OSError:
             print(f'Port {port} is occupied. Set a free port in .env. No processes were stopped.', file=sys.stderr)
@@ -72,12 +76,14 @@ def main() -> int:
     finally:
         for child in children:
             if child.poll() is None:
-                os.killpg(child.pid, signal.SIGTERM)
+                with suppress(ProcessLookupError):
+                    os.killpg(child.pid, signal.SIGTERM)
         for child in children:
             try:
                 child.wait(timeout=6)
             except subprocess.TimeoutExpired:
-                os.killpg(child.pid, signal.SIGKILL)
+                with suppress(ProcessLookupError):
+                    os.killpg(child.pid, signal.SIGKILL)
                 child.wait()
         print('Fly Kitchen stopped; all owned children reaped.', flush=True)
 

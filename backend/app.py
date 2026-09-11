@@ -14,6 +14,7 @@ logger = logging.getLogger('fly-kitchen')
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.circuit = Circuit()
+    app.state.graph = build_graph(app.state.circuit)
     app.state.sessions = 0
     yield
 
@@ -31,18 +32,26 @@ def circuit():
     return app.state.circuit.summary()
 
 
-@app.get('/api/circuit/graph')
-def graph():
-    c = app.state.circuit
-    # Representative view from actual measured edges, never a generated topology.
+def build_graph(c: Circuit) -> dict:
+    """Representative view from actual measured edges, never a generated topology.
+
+    Deterministic, so it is computed once at startup instead of per request.
+    """
     ordered = sorted(c.edges, key=lambda e: e[2], reverse=True)
     ids: set[str] = set()
     for a, b, _ in ordered:
+        if len(ids) >= 120:
+            break
         if len(ids | {a, b}) <= 120:
             ids.update((a, b))
     edges = [e for e in ordered if e[0] in ids and e[1] in ids][:320]
     return {'nodes': [n for n in c.neurons if n['id'] in ids], 'edges': edges,
             'view': 'Strongest connected 120-neuron sample; not anatomical positions.', 'total_neurons': c.n}
+
+
+@app.get('/api/circuit/graph')
+def graph():
+    return app.state.graph
 
 
 @app.websocket('/api/simulation')
@@ -53,15 +62,21 @@ async def simulation(ws: WebSocket):
         await ws.close(code=1013)
         return
     app.state.sessions += 1
-    brain = Brain(app.state.circuit, settings.neural_seed)
     try:
+        brain = Brain(app.state.circuit, settings.neural_seed)
         await ws.send_json({'type': 'connected', **app.state.circuit.summary()})
         while True:
             try:
-                raw = await asyncio.wait_for(ws.receive_text(), timeout=90)
+                message = await asyncio.wait_for(ws.receive(), timeout=90)
             except asyncio.TimeoutError:
                 await ws.close(code=1000, reason='Idle session expired')
                 break
+            if message['type'] == 'websocket.disconnect':
+                break
+            raw = message.get('text')
+            if raw is None:
+                await ws.send_json({'type': 'error', 'message': 'Simulation input must be a text frame.'})
+                continue
             if len(raw) > 4096:
                 await ws.send_json({'type': 'error', 'message': 'Simulation packet exceeds 4096 characters.'})
                 continue

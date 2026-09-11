@@ -95,6 +95,13 @@ def test_real_graph_changes_downstream_activity_with_sensory_stimulation():
         high=stim.step(SensoryInput(odor_left=1,odor_right=.8))
     assert low.spikes==0
     assert high.spikes>100
+    # Assert on descending activity: that is the circuit's own output, whereas
+    # forward is an engineered decoder with its own operating band.
+    assert low.motor_left_hz==0 and low.motor_right_hz==0
+    assert high.motor_left_hz>0 or high.motor_right_hz>0
+    # The decoder needs the circuit to reach that band before it commands thrust.
+    for _ in range(25):
+        high=stim.step(SensoryInput(odor_left=1,odor_right=.8))
     assert high.motor.forward>0
 
 
@@ -103,8 +110,9 @@ def test_excitation_dominant_subgraph_sustains_activity_without_sensory_drive():
 
     The bounded subgraph carries about twice as much excitatory as inhibitory
     synapse mass, so once it is driven it holds a self-sustaining state: removing
-    all sensory input leaves most of the activity, and firing rates approach the
+    all sensory input leaves most of the activity, and firing rates sit at the
     refractory ceiling. Silencing remains the only intervention that clears it.
+    Bands are tight so a drift away from the documented figures fails here.
     """
     c = Circuit()
     b = Brain(c, 42)
@@ -114,7 +122,73 @@ def test_excitation_dominant_subgraph_sustains_activity_without_sensory_drive():
     for _ in range(60):
         quiet = b.step(stim, gain=0)
     assert quiet.spikes > 0, 'expected the recurrent state to persist'
-    assert quiet.mean_hz > driven.mean_hz * .5
-    assert b.rates.max() > 150, 'expected near-ceiling rates in the sustained state'
+    assert .78 < quiet.mean_hz / driven.mean_hz < .90, 'documented retention is ~84%'
+    firing = b.rates[b.rates > 1]
+    assert 850 < firing.size < 1100, 'documented ~960 neurons firing'
+    assert 150 < np.median(firing) < 200, 'documented median ~172 Hz'
+    assert firing.max() > 400, 'documented near-ceiling rates'
     cleared = b.step(stim, silenced=True)
     assert cleared.spikes == 0 and cleared.motor.forward == 0
+
+
+def test_refractory_ceiling_matches_documented_period():
+    """The documented 2.2 ms refractory must be the period actually enforced."""
+    c = Circuit()
+    b = Brain(c, 42)
+    drive = np.zeros(c.n)
+    drive[0] = 1e6
+    b.integrate(drive, 5000)
+    interval_ms = 5000 / b.counts[0] * b.dt
+    assert abs(interval_ms - 2.2) < .01, f'refractory period is {interval_ms} ms'
+    assert abs(c.summary()['refractory_ms'] - 2.2) < 1e-9
+
+
+def test_hygrosensory_neurons_are_excluded_from_the_thermal_drive():
+    """TRN_VP1m is hygrosensory; it must not be driven as a cold receptor."""
+    c = Circuit()
+    assert c.hot.sum() and c.cold.sum()
+    assert not (c.hot & c.cold).any()
+    hygro = c.modality['thermal'] & ~c.hot & ~c.cold
+    assert hygro.sum() == 11
+    b = Brain(c, 42)
+    assert b.encode(SensoryInput(cold=1), 1.0)[hygro].max() == 0
+
+
+def test_decoder_has_no_permanent_turn_bias_and_forward_is_not_clipped():
+    """The subgraph samples more right descending neurons than left.
+
+    A decoder reading raw left/right rates emits a constant yaw that no sensory
+    input caused, and a forward channel pinned at the top of tanh. Both are
+    regressions worth catching. See docs/science.md.
+    """
+    c = Circuit()
+    b = Brain(c, 42)
+    null = SensoryInput()
+    for _ in range(150):
+        settled = b.step(null)
+    assert abs(settled.motor.turn) < .25, 'resting yaw should not be a standing bias'
+    assert .35 < settled.motor.forward < .75, 'forward must sit inside the tanh range'
+    strong = b.step(SensoryInput(taste=1))
+    for _ in range(20):
+        strong = b.step(SensoryInput(taste=1))
+    assert strong.motor.forward > settled.motor.forward + .1, 'forward must respond to drive'
+
+
+def test_lateral_light_asymmetry_produces_opposing_turns():
+    """The one sensory channel that measurably steers through this decoder."""
+    c = Circuit()
+    peaks = {}
+    for name, sensors in (('left', SensoryInput(light_left=1, light_right=0)),
+                          ('right', SensoryInput(light_left=0, light_right=1))):
+        b = Brain(c, 42)
+        null = SensoryInput()
+        for _ in range(150):
+            b.step(null)
+        peak = 0.0
+        for _ in range(20):
+            turn = b.step(sensors).motor.turn
+            if abs(turn) > abs(peak):
+                peak = turn
+        peaks[name] = peak
+    assert peaks['right'] > .4 and peaks['left'] < 0, f'no lateral separation: {peaks}'
+    assert peaks['right'] - peaks['left'] > .8
