@@ -1,0 +1,12 @@
+{
+  "dataset": "male-cns:v1.0",
+  "source": "https://neuprint.janelia.org",
+  "license": "CC-BY-4.0",
+  "fetched_at": "2026-09-11T11:52:56.471493+00:00",
+  "selection": "Sensory seeds + three strongest outgoing expansions (700/1000/900); induced edges >=3 synapses.",
+  "neurons": 4390,
+  "edges": 251004,
+  "synapses": 5202110,
+  "sha256": "6e7b381df8a73229c217f5bf9ac9c667b8e505bb55c9952d0135be8718b65eba",
+  "descending_neurons": 259
+}
