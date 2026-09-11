@@ -1201,6 +1201,18 @@ export default function App() {
                 validated reconstruction of fly behavior.
               </p>
               <p>
+                <b>The driven circuit sustains itself.</b> This bounded subgraph
+                carries about twice as much excitatory as inhibitory synapse mass.
+                From rest it stays silent, but once driven it holds a
+                self-sustaining state: setting sensory gain to zero leaves roughly
+                83% of the firing rate and the descending output still running, and
+                firing rates in that state approach the refractory ceiling, well
+                above biologically plausible values. Sensory input modulates this
+                state rather than gating it, so motor output is not a clean readout
+                of current sensory input. Silence all neurons is the intervention
+                that actually clears it.
+              </p>
+              <p>
                 Physics models an enlarged 12 mm collision radius for accessible
                 interaction. Flight is force-controlled; it does not solve
                 flapping-wing aerodynamics. Thermal/odor/light fields are

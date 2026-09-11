@@ -45,6 +45,30 @@ transmitters produce zero modeled outgoing weight (426 neurons). This ignores
 receptor-specific signs and neuromodulation. Synapse counts are structural measurements,
 not calibrated physiological weights. No plasticity, training, or LLM is used.
 
+### Measured limitation: the driven state is self-sustaining and saturated
+
+The selection keeps the strongest outgoing paths, which leaves the subgraph
+excitation-dominant: 3,282,695 excitatory against 1,560,868 inhibitory synapses
+(about 2.1:1), plus 358,547 synapses with no modeled sign. The consequence is
+measurable and is covered by a regression test:
+
+* From rest with no sensory drive the circuit stays silent (0 spikes).
+* Once driven, roughly 960 neurons enter a self-sustaining state. Setting sensory
+  gain to zero leaves about 83% of the mean rate (≈47 Hz → ≈39 Hz) and descending
+  output near 23 Hz, indefinitely. Sensory input modulates this state; it does not
+  gate it.
+* In that state the median rate of firing neurons is ≈165 Hz, reaching ≈420 Hz
+  against a 454 Hz refractory ceiling. **These rates are not biologically plausible**
+  for central Drosophila neurons and indicate runaway recurrent excitation, not
+  physiological persistent activity.
+
+This is a property of an induced, strength-biased subgraph driven by uniform
+structural weights. It is reported rather than tuned away, because rescaling the
+weights would abandon both the measured synapse counts and the published reference
+parameters. It bounds what the demo can claim: motor output is not a clean readout
+of current sensory input. The **Silence all neurons** control is the intervention
+that actually clears the state, and it is the honest causal test in the interface.
+
 ## Sensory translation and decoding
 
 | Channel | Input | Target | Limitation |

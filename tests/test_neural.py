@@ -96,3 +96,25 @@ def test_real_graph_changes_downstream_activity_with_sensory_stimulation():
     assert low.spikes==0
     assert high.spikes>100
     assert high.motor.forward>0
+
+
+def test_excitation_dominant_subgraph_sustains_activity_without_sensory_drive():
+    """Measured limitation, documented in docs/science.md.
+
+    The bounded subgraph carries about twice as much excitatory as inhibitory
+    synapse mass, so once it is driven it holds a self-sustaining state: removing
+    all sensory input leaves most of the activity, and firing rates approach the
+    refractory ceiling. Silencing remains the only intervention that clears it.
+    """
+    c = Circuit()
+    b = Brain(c, 42)
+    stim = SensoryInput(odor_left=.3, odor_right=.2)
+    for _ in range(30):
+        driven = b.step(stim)
+    for _ in range(60):
+        quiet = b.step(stim, gain=0)
+    assert quiet.spikes > 0, 'expected the recurrent state to persist'
+    assert quiet.mean_hz > driven.mean_hz * .5
+    assert b.rates.max() > 150, 'expected near-ceiling rates in the sustained state'
+    cleared = b.step(stim, silenced=True)
+    assert cleared.spikes == 0 and cleared.motor.forward == 0

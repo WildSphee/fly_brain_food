@@ -29,8 +29,8 @@ is the user's single entry point; it accepts no arguments and owns only its chil
 
 ## Phase 4 — verification and critic loop (at most four rounds)
 - [x] Build/type-check frontend and run backend tests.
-- [ ] Browser play-test cameras, controls, food, environment, neural connection, and reset.
-- [ ] Verify launcher startup, port conflict behavior, Ctrl-C, and process cleanup.
+- [x] Browser play-test cameras, controls, food, environment, neural connection, and reset.
+- [x] Verify launcher startup, port conflict behavior, Ctrl-C, and process cleanup.
 - [ ] Independent critic round 1: ranked issues and 0–10 scores from code, play, realism, and integration viewpoints.
 - [ ] Address findings and repeat critic review if needed (maximum four rounds).
 - [ ] Record final scores honestly; pass requires >=8.5 and no errors.
@@ -43,6 +43,30 @@ graph may be represented as MaleCNS. Sensory encoding, flight mechanics, and mot
 are explicit modeling assumptions. No LLM is needed for the neural simulation.
 
 ## Review log
-Round 1 is in progress with the independent critic. Initial backend validation: 14 tests pass.
-Frontend production build and TypeScript checks pass. Browser testing found missing external
-texture atlases; fixed by embedding original textures into the downloaded GLBs.
+
+### Verification before critic round 1
+Backend: 15 pytest tests pass. Frontend: TypeScript build clean (now type-checking the e2e
+suite too). Browser: 18 Playwright tests pass against a real launcher-started instance.
+Earlier browser testing found missing external texture atlases; fixed by embedding the
+original textures into the downloaded GLBs.
+
+The readme documented `npm run test:e2e`, but no Playwright config or specs existed. Added
+`frontend/playwright.config.ts` and an 18-test suite covering habitat load, all four cameras
+by click and keyboard, pause/resume, manual flight, food placement and removal, environment
+and overlay controls, reset, phone-width layout, neural connection and provenance, live
+telemetry, silencing, the circuit and log views, JSON export, and dialogs. Console and page
+errors fail the tests. `scripts/test_browser.py` runs it against a temporary instance on free
+ports and always stops it, so it never collides with a running copy or leaves a process behind.
+
+### Finding: the driven circuit is self-sustaining and saturated
+Measured while play-testing sensory gain. The bounded subgraph is excitation-dominant
+(3,282,695 excitatory against 1,560,868 inhibitory synapses, ~2.1:1). From rest it is silent,
+but once driven it holds a self-sustaining state: sensory gain at zero leaves ~83% of the mean
+rate (~47 Hz to ~39 Hz) with descending output still near 23 Hz, and ~960 neurons fire at a
+median ~165 Hz up to ~420 Hz against a 454 Hz refractory ceiling. Those rates are not
+biologically plausible and indicate runaway recurrent excitation.
+
+Reported rather than tuned away: rescaling weights would abandon both the measured synapse
+counts and the published reference parameters. Now covered by a regression test, and disclosed
+in docs/science.md, the readme, and the in-app "About the model" dialog. Silencing remains the
+one intervention that clears the state.

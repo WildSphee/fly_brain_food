@@ -62,6 +62,13 @@ not the entire CNS. LIF dynamics use structural synapse counts and transmitter s
 The sensory encoders, motor readout, body scale, flight controller, and environment fields
 are explicit approximations. This is not a validated reconstruction of fly behavior.
 
+One limitation is large enough to state here: the subgraph is excitation-dominant, so once
+driven it holds a **self-sustaining, saturated state**. Sensory gain at zero still leaves
+about 83% of the firing rate and a running descending output, and rates in that state reach
+the refractory ceiling rather than biologically plausible values. Sensory input modulates
+the circuit; it does not gate it. **Silence all neurons** is the control that actually clears
+it. This is measured, regression-tested, and reported rather than tuned away.
+
 See [model equations, sources, and limitations](docs/science.md),
 [asset credits](docs/assets.md), and [feature/review tracker](phase.md).
 The UI also exposes provenance and limitations through **About the model**.
@@ -80,9 +87,16 @@ npm run test:e2e
 ```
 
 The first browser test run needs `cd frontend && npx playwright install chromium`.
-`python3 scripts/test_launcher.py` runs a bounded launcher test on two temporary ports,
-checks that an occupied-port launch leaves the first process intact, and verifies SIGINT
-cleanup. It cleans up its own processes. Do not leave temporary app servers running.
+
+Two bounded checks start their own temporary instance on free ports and stop it again,
+so they never collide with a copy you are running and never leave a process behind:
+
+```bash
+python3 scripts/test_launcher.py   # startup, port-conflict refusal, Ctrl-C, child reaping
+python3 scripts/test_browser.py    # the 18-test Playwright play-test, app started and stopped
+```
+
+Do not leave temporary app servers running.
 
 Refresh data explicitly with `.venv/bin/python scripts/import_connectome.py`. This performs
 read-only neuPrint queries using the server-side credential and atomically replaces the
