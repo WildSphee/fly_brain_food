@@ -62,12 +62,23 @@ not the entire CNS. LIF dynamics use structural synapse counts and transmitter s
 The sensory encoders, motor readout, body scale, flight controller, and environment fields
 are explicit approximations. This is not a validated reconstruction of fly behavior.
 
-One limitation is large enough to state here: the subgraph is excitation-dominant, so once
-driven it holds a **self-sustaining, saturated state**. Sensory gain at zero still leaves
-about 83% of the firing rate and a running descending output, and rates in that state reach
-the refractory ceiling rather than biologically plausible values. Sensory input modulates
-the circuit; it does not gate it. **Silence all neurons** is the control that actually clears
-it. This is measured, regression-tested, and reported rather than tuned away.
+Two limitations are large enough to state here, both measured and regression-tested:
+
+**The circuit saturates.** The subgraph is excitation-dominant, so it ignites on its own
+within ~800 ms of neural time and then holds a self-sustaining state. Sensory gain at zero
+still leaves about 84% of the firing rate and a running descending output, and firing rates
+sit pinned at the 455 Hz refractory ceiling rather than at biologically plausible values.
+Sensory input modulates the circuit; it does not gate it. **Silence all neurons** is the
+control that actually clears it.
+
+**Only some senses steer.** The motor decoder is engineered, not biological. Light produces
+a genuine left/right differential (1.22 separation, sign reversing with side), and taste and
+temperature move the output clearly. **Odor does not steer**: full-strength unilateral odor
+separates left from right by 0.077, below the ±0.16 null spread. Odor raises population
+firing but yields no reliable turning signal through this decoder. What you see when the fly
+approaches food is the engineered explorer and physics, not olfactory navigation. Several
+reflexes — thermal avoidance, odor-driven altitude, feeding — are hard-coded rules reading
+raw sensors, and `hunger`/`energy` are game variables with no link to any neuron.
 
 See [model equations, sources, and limitations](docs/science.md),
 [asset credits](docs/assets.md), and [feature/review tracker](phase.md).
