@@ -1,0 +1,218 @@
+[
+  {
+    "file": "banana.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "67c90aa8bef35b8886d6b67c0c4c3249556e28176c893d451b95cd83a156908c"
+  },
+  {
+    "file": "apple.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "2a80ab65d5bc2cb4f2bca1e8176cbb591849a288596d4b2e76e411338761a526"
+  },
+  {
+    "file": "apple-half.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "3de1f55449761d8dd80444acfe0f941a179c10a69c8727086473b569787fd120"
+  },
+  {
+    "file": "bread.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "9bd9db117db654cf1157439d1257a8fc5915ea77a94fb876a5056522b9e49f46"
+  },
+  {
+    "file": "cheese.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "092c9326a27fc51edfaa0353c411875993ac109ee5e8923b681cc39fbb6312d1"
+  },
+  {
+    "file": "cheese-cut.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "3937390f5d3cf21434844d7aab87a9c9d1ce75a38e71177959ca5cbdc7a4db14"
+  },
+  {
+    "file": "croissant.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "f2f8ee64d7850b262a6af2492cd042fa8eb6506cde49d439360ad1a3df48fe9e"
+  },
+  {
+    "file": "mug.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "5215ef74dbbc3a1c0ecf8d0937adde745bbcbd65d8facd228d9f3371991da435"
+  },
+  {
+    "file": "plate.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "4c1de567b854264b2a9407ec221d33dfd13c7fc18563ea1f33cb8abe3a3d11be"
+  },
+  {
+    "file": "bowl.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "92463570dced6e0898cdc11c218c477efa9b1693d6d3c0e661b67119f294ca7b"
+  },
+  {
+    "file": "bottle-oil.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "a87a7a6146be0996b17aca3ccd011cfe0d045593db03f89829f88b6228b49d57"
+  },
+  {
+    "file": "cutting-board.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "067f8a9331d16c65487a748747de2cddab2a77826f23bd7379e4f5da186c78ea"
+  },
+  {
+    "file": "pot.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "ba84c5ebd769849b7cb0365adf1f6044680e024ba29e0bc1bec93d54100f72b3"
+  },
+  {
+    "file": "pan.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "71abfe3ec45a852b51d8bced9afb997b796996a5ef6cd4beae4d489eea93895c"
+  },
+  {
+    "file": "knife-block.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "cef03be799fed3befbd09f44d883ea9b1c050f9dcb00fa1e5b9cd924a4c8517e"
+  },
+  {
+    "file": "tomato.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "c2179712b2fd4f5832f79f09f7188c4bc92f05798229d0e58264e1ca2558f4cc"
+  },
+  {
+    "file": "orange.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "a85c498e77fcab7da23386699d5af5cda1bcdf2c068b83b9db2fa2da48a06a30"
+  },
+  {
+    "file": "utensil-fork.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "9b470b64539caaa7f233171a7bda4555eee7688672efab8e1522cbfbae40c7b5"
+  },
+  {
+    "file": "cooking-knife.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "4bec734243cb3e8fa636e17a4ef27828bdaecfc8ac23bd847b9b86f6945cb4d2"
+  },
+  {
+    "file": "loaf.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "d2e490046b919e8b793b1f479b9b3ee941c8fb9e657163d073223f2a39c5f563"
+  },
+  {
+    "file": "donut.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "7dcd094f063efb215b2e1740c426f5b899776ce63e223ce1b1377af6c7d9ef2f"
+  },
+  {
+    "file": "strawberry.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "685828642a92681b474c29abbd9cabe98c7bcade62cc50da57ec6658a5b7e8f7"
+  },
+  {
+    "file": "avocado.glb",
+    "source": "https://kenney.nl/assets/food-kit",
+    "license": "CC0-1.0",
+    "sha256": "bce429e7259d7b48ce8e6b9a5744f649392001a9241130bccee1e1baa9c6eb3f"
+  },
+  {
+    "file": "kitchenSink.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "7b9610277d71f00dcf1bba49cf4d98d77ce5177e84bf76c7da2f8893e542f743"
+  },
+  {
+    "file": "kitchenStove.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "3239edb36295dfca9530a9b9a6ad0aff98ce62e7cf8d13ca2a5a1a6b2a904656"
+  },
+  {
+    "file": "kitchenCoffeeMachine.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "063f582c6fa0f00a9f24e3393dac2295491c4becdaf5513c893ab1a2826b6ec3"
+  },
+  {
+    "file": "toaster.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "38c1fb7b122be9997758c8ee855d87f28014cf282f24d66d39f4e8d8b236d2af"
+  },
+  {
+    "file": "plantSmall1.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "2b9c022feb47be857b2c4fdc29f36522766ba9b70c578c31d7c05d71b4377d15"
+  },
+  {
+    "file": "plantSmall2.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "d7c8ff42c66dd4f9238a73570549813d1ca6c5f6f661d7af9cb764c4fce314b9"
+  },
+  {
+    "file": "plantSmall3.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "1aa38b1b22bd19fa4f9f3abd8c4cbf50da2d6fa721cf1f9aa4d80bb89b1bef94"
+  },
+  {
+    "file": "pottedPlant.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "5b760eda2766f75fda36b2c5df652a1662f82981ef64cd8fa7fe7bcd386b3a15"
+  },
+  {
+    "file": "stoolBar.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "a86167a9f92401a61fec7e509ad089ecc552d0f299743add3aeb919acb24e341"
+  },
+  {
+    "file": "chair.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "c8a11eec93e89e31250ba91afc1b8d56c3bec7ae86640fd1239f595ff4180883"
+  },
+  {
+    "file": "kitchenFridgeLarge.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "5851cc59c7e12f6f34a01a2ea93d5b9540be4078c1b703f517239fcede98fb32"
+  },
+  {
+    "file": "books.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "b8dc56e5d29f6fc1f4727fccb1b9642627fee9942c48060a00034e98df02701c"
+  },
+  {
+    "file": "rugRectangle.glb",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0-1.0",
+    "sha256": "a989d2d59c04e3071e0c90388b113a9a8f339ce1814ef984c51cb6dcd7c8e0eb"
+  }
+]

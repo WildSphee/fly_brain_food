@@ -1,0 +1,1 @@
+"""Fly Kitchen simulation service."""

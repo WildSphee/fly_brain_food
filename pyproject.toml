@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "fly-kitchen"
+version = "0.1.0"
+description = "An interactive MaleCNS circuit experiment in a 3D kitchen"
+authors = ["Reagan <rrr.chanhiulok@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.15"
+fastapi = "^0.135"
+uvicorn = {version = "^0.41", extras = ["standard"]}
+pydantic-settings = "^2.13"
+numpy = "^2.4"
+scipy = "^1.17"
+httpx = "^0.28"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
