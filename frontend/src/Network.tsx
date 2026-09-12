@@ -52,17 +52,8 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
   return (
     <div className="network-view">
       <div className="network-heading">
-        <span className="eyebrow">MEASURED TOPOLOGY</span>
-        <h2>
-          A little brain.
-          <br />
-          <em>A lot of connections.</em>
-        </h2>
-        <p>
-          Explore 120 neurons from the active MaleCNS circuit.
-          <br />
-          Select a node to inspect its original annotation.
-        </p>
+        <h2>Neural circuit</h2>
+        <p>120 neurons · select a node</p>
       </div>
       <svg
         className="network-svg"

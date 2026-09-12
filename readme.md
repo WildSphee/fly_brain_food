@@ -1,4 +1,4 @@
-# Fly Kitchen
+# Fly Matrix
 
 An interactive 3D kitchen with a real MaleCNS connectome circuit, live neural telemetry,
 physical flight, editable food sources, and first/third-person and fixed/orbit cameras.
@@ -43,16 +43,17 @@ needed. No LLM calls or mock LLM outputs exist.
 
 ## Play
 
-- Drag/scroll in Orbit. Camera shortcuts: **1** Orbit, **2** Follow, **3** Fly eye, **4** Fixed.
-- Choose **Manual**: W/S forward/back, A/D turn, E/Q up/down, F land/takeoff.
-- **Space** pauses/resumes. **Reset experiment** restores the habitat and neural seed.
-- Adjust time, sunlight, room temperature, stove, fridge, window, and kitchen light.
-- **Add food** chooses a model; click a horizontal surface to place it. Escape cancels.
-- Odor, thermal, and light overlays reveal approximate fields. Flight trail shows recent motion.
-- **Silence all neurons** tests whether autonomous motion depends on neural output.
-- **Neural circuit** displays actual measured edges. Select a node to inspect its ID.
-- **Experiment log → Export experiment** saves options, provenance, world state, telemetry,
-  and the bounded event log as JSON. State is session-local; reloading starts a new experiment.
+- The right panel groups **Simulation**, **Environment**, and **Brain** settings. Use its chevron to minimize or expand it.
+- **Add fly** on the left creates up to 12 flies with distinct colors and starting positions. Select a fly in the list or click it in the room.
+- Drag a fly to move it through the camera plane; drag food to move it across the table, counter, or floor. Drag empty space to orbit and scroll to zoom.
+- Click the pendant light, fridge, window, or stove to toggle them. The fridge doors animate and lit burners show flames. Flies stay inside even with the window open.
+- Camera shortcuts: **1** Orbit, **2** Follow selected fly, **3** Fly eye, **4** Fixed. The Simulation tab also offers **0.5×**, **1×**, and **2×** room speed.
+- Choose **Manual**: W/S forward/back, A/D turn, E/Q up/down, F land/takeoff for the selected fly. **Space** pauses/resumes.
+- In Environment, choose a food icon then click a surface to place it. Escape cancels. Odor, thermal, and light overlays show approximate fields.
+- **Record video** records the 3D camera view at 30 FPS. **Stop & save video** downloads WebM (or MP4 where supported). Recording runs in real time and excludes the interface.
+- **Reset** restores one fly, the habitat, and the neural seed. The Brain tab keeps neural telemetry, silencing, sensory gain, and the circuit viewer. About the model contains provenance and scientific limits.
+
+Each fly has independent physics, exploration, energy, and hunger. The selected fly supplies sensory input to one shared neural circuit; all flies receive its motor output. Additional flies do not create independent connectome simulations. Room speed changes physical simulation time; neural integration retains its own clock.
 
 ## Scientific scope
 
@@ -104,7 +105,7 @@ so they never collide with a copy you are running and never leave a process behi
 
 ```bash
 python3 scripts/test_launcher.py   # startup, port-conflict refusal, Ctrl-C, child reaping
-python3 scripts/test_browser.py    # the 18-test Playwright play-test, app started and stopped
+python3 scripts/test_browser.py    # the Playwright interaction and neural checks, app started and stopped
 ```
 
 Do not leave temporary app servers running.

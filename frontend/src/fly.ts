@@ -1,13 +1,13 @@
 import * as THREE from "three";
 
-export function makeFly() {
+export function makeFly(color = "#c6eaa0") {
   const group = new THREE.Group();
   const dark = new THREE.MeshStandardMaterial({
-    color: "#393526",
+    color: new THREE.Color(color).multiplyScalar(0.42),
     roughness: 0.58,
   });
   const abdomen = new THREE.MeshStandardMaterial({
-    color: "#a48649",
+    color,
     roughness: 0.65,
   });
   const red = new THREE.MeshStandardMaterial({
@@ -35,7 +35,7 @@ export function makeFly() {
   sphere([0.024, 0.016, 0.049], [0.017, 0.022, 0.017], red);
   const wings: THREE.Group[] = [];
   const wingMat = new THREE.MeshPhysicalMaterial({
-    color: "#e4ede8",
+    color: new THREE.Color(color).lerp(new THREE.Color("white"), 0.75),
     transparent: true,
     opacity: 0.68,
     side: THREE.DoubleSide,

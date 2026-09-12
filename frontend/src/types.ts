@@ -70,7 +70,16 @@ export interface Circuit {
   selection: string;
   fidelity: string;
 }
+export interface FlyInfo {
+  id: number;
+  color: string;
+  x: number;
+  y: number;
+  z: number;
+}
 export interface WorldStats {
+  flies: FlyInfo[];
+  selectedFly: number;
   elapsed: number;
   speed: number;
   altitude: number;

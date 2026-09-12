@@ -63,7 +63,7 @@ def main() -> int:
         if stopping:
             return 0
         children.append(subprocess.Popen(['node', 'node_modules/vite/bin/vite.js'], cwd=ROOT / 'frontend', env=env, start_new_session=True))
-        print(f'\nFly Kitchen → http://localhost:{settings.frontend_port}\nCtrl-C stops this application and its children.\n', flush=True)
+        print(f'\nFly Matrix → http://localhost:{settings.frontend_port}\nCtrl-C stops this application and its children.\n', flush=True)
         while not stopping:
             for child in children:
                 if child.poll() is not None:
@@ -85,7 +85,7 @@ def main() -> int:
                 with suppress(ProcessLookupError):
                     os.killpg(child.pid, signal.SIGKILL)
                 child.wait()
-        print('Fly Kitchen stopped; all owned children reaped.', flush=True)
+        print('Fly Matrix stopped; all owned children reaped.', flush=True)
 
 
 if __name__ == '__main__':

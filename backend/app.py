@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title='Fly Kitchen', version='0.1.0', lifespan=lifespan)
+app = FastAPI(title='Fly Matrix', version='0.1.0', lifespan=lifespan)
 
 
 @app.get('/api/health')

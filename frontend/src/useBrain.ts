@@ -43,9 +43,7 @@ export function useBrain(
           setCircuit(data);
           setError("");
           setStatus("live");
-          event.current(
-            "MaleCNS circuit connected · independent neural session",
-          );
+          event.current("Neural circuit connected");
           if (world.current) world.current.connected = true;
         }
         if (data.type === "telemetry") {

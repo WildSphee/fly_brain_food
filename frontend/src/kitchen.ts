@@ -50,6 +50,10 @@ export interface Kitchen {
   odor: THREE.Group;
   lightField: THREE.Group;
   windowPane: THREE.Mesh;
+  interactions: THREE.Object3D[];
+  fridgeDoors: THREE.Object3D[];
+  flames: THREE.Group;
+  pendant: THREE.Mesh;
   assetsReady: Promise<unknown[]>;
 }
 
@@ -102,6 +106,13 @@ export function buildKitchen(
     return m;
   }
   const surfaces: THREE.Mesh[] = [];
+  const interactions: THREE.Object3D[] = [];
+  const fridgeDoors: THREE.Object3D[] = [];
+  const interactive = (object: THREE.Object3D, action: string) => {
+    object.userData.action = action;
+    interactions.push(object);
+    return object;
+  };
   const assets: Promise<unknown>[] = [];
   const add = (name: string, pos: number[], width: number, r = 0) => {
     assets.push(model(scene, name, pos, width, r));
@@ -135,6 +146,10 @@ export function buildKitchen(
     [
       [0, 3.6, 0],
       [9.2, 0.15, 7.2],
+    ],
+    [
+      [0, 1.75, -3.57],
+      [9.2, 3.5, 0.15],
     ],
   ] as number[][][])
     world.createCollider(
@@ -186,6 +201,8 @@ export function buildKitchen(
   );
   windowPane.position.set(1.34, 2.18, -3.39);
   scene.add(windowPane);
+  interactive(sky, "windowOpen");
+  interactive(windowPane, "windowOpen");
   add("plantSmall1", [-0.68, 1.3, -3.22], 0.32);
   add("plantSmall3", [1.84, 1.3, -3.22], 0.4);
   // Decorative shelves and kitchen objects sourced from Kenney's CC0 packs.
@@ -205,7 +222,10 @@ export function buildKitchen(
   add("knife-block", [1.93, 1.07, -2.94], 0.28);
   add("bottle-oil", [2.23, 1.07, -3.01], 0.2);
   // Stovetop and oven have their own collision volume.
-  box([3.25, 1.076, -2.88], [1.45, 0.06, 0.98], "#33392e", true, 0.22);
+  interactive(
+    box([3.25, 1.076, -2.88], [1.45, 0.06, 0.98], "#33392e", true, 0.22),
+    "stove",
+  );
   for (const x of [2.91, 3.58])
     for (const z of [-3.12, -2.65]) {
       cyl([x, 1.115, z], 0.18, 0.02, "#161b17");
@@ -213,7 +233,7 @@ export function buildKitchen(
     }
   add("pot", [2.92, 1.15, -3.1], 0.5);
   add("pan", [3.61, 1.15, -2.65], 0.62, -0.7);
-  box([3.25, 0.53, -2.28], [1.3, 0.64, 0.06], "#3d4539");
+  interactive(box([3.25, 0.53, -2.28], [1.3, 0.64, 0.06], "#3d4539"), "stove");
   box([3.25, 0.48, -2.235], [1.06, 0.4, 0.025], "#222e27");
   box([3.25, 0.77, -2.19], [0.91, 0.04, 0.05], "#aaa48b");
   box([3.26, 2.18, -3.16], [1.65, 0.16, 0.78], "#ccc9b4");
@@ -221,7 +241,43 @@ export function buildKitchen(
   const glow = cyl([2.92, 1.14, -3.12], 0.2, 0.01, "#ed6d3e");
   (glow.material as THREE.MeshStandardMaterial).emissive.set("#eb5f28");
   // Fridge along left side, table island, stools, rug, and houseplant.
-  add("kitchenFridgeLarge", [-3.85, 0.03, -0.95], 1.14, Math.PI / 2);
+  assets.push(
+    model(
+      scene,
+      "kitchenFridgeLarge",
+      [-3.85, 0.03, -0.95],
+      1.14,
+      Math.PI / 2,
+    ).then((fridge) => {
+      interactive(fridge, "fridge");
+      fridge.traverse((n) => {
+        if (n.name === "doorLeft" || n.name === "doorRight")
+          fridgeDoors.push(n);
+      });
+    }),
+  );
+  const flames = new THREE.Group();
+  scene.add(flames);
+  for (const x of [2.91, 3.58])
+    for (const z of [-3.12, -2.65]) {
+      for (let i = 0; i < 10; i++) {
+        const flame = new THREE.Mesh(
+          new THREE.ConeGeometry(0.028, 0.16, 7),
+          new THREE.MeshBasicMaterial({
+            color: i % 2 ? "#ffba56" : "#70baff",
+            transparent: true,
+            opacity: 0.85,
+          }),
+        );
+        flame.position.set(
+          x + Math.cos((i * Math.PI) / 5) * 0.16,
+          1.21,
+          z + Math.sin((i * Math.PI) / 5) * 0.16,
+        );
+        flames.add(flame);
+      }
+    }
+  interactive(flames, "stove");
   box([-3.85, 1.03, -0.95], [1.12, 2.03, 1.12], "#d9d8c8", true).visible =
     false;
   box([0.08, 0.54, 0.62], [3.28, 1.06, 1.44], "#757f61", true);
@@ -261,8 +317,10 @@ export function buildKitchen(
   );
   shade.position.set(0.1, 2.72, 0.5);
   scene.add(shade);
+  interactive(shade, "lamp");
   const pendant = cyl([0.1, 2.6, 0.5], 0.3, 0.02, "#fbdfad");
   (pendant.material as THREE.MeshStandardMaterial).emissive.set("#ffdc9a");
+  interactive(pendant, "lamp");
   const lamp = new THREE.PointLight("#ffca83", 0, 8, 2);
   lamp.position.set(0.1, 2.55, 0.5);
   scene.add(lamp);
@@ -328,6 +386,10 @@ export function buildKitchen(
     odor,
     lightField,
     windowPane,
+    interactions,
+    fridgeDoors,
+    flames,
+    pendant,
     assetsReady: Promise.all(assets),
   };
 }
