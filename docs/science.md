@@ -76,8 +76,8 @@ signature of truncated inhibition, not of faithfulness. It is reported rather th
 hidden, and the **Silence all neurons** control is the intervention that actually
 clears it.
 
-The principled fix is to correct the *sampling* rather than the weights — pulling in
-the neurons that supply inhibition onto the selected set, and enforcing bilateral
+The principled fix is to correct the *sampling* rather than the weights, by pulling in
+the neurons that supply inhibition onto the selected set and enforcing bilateral
 closure so each selected cell's contralateral partner is included. That would cost
 nothing in fidelity and would also remove the laterality bias described below, at
 the price of a larger graph and a longer import. It is not done here, and the
@@ -113,10 +113,10 @@ hand-built controller, and two properties of this subgraph forced its design:
 
 * **Forward** is `tanh((left + right − 40 Hz) / 38 Hz)`. The circuit's descending
   population sits around 61 Hz combined, so the earlier `tanh(sum / 25)` was pinned
-  at 0.98 in *every* condition including zero sensory input — a constant, not a
-  readout. The offset and scale place the operating band inside the responsive part
-  of tanh. Below ~40 Hz combined the command is zero, so the fly does not fly during
-  the first second of neural time while the circuit ignites.
+  at 0.98 in *every* condition including zero sensory input, making it a constant
+  rather than a readout. The offset and scale place the operating band inside the
+  responsive part of tanh. Below ~40 Hz combined the command is zero, so the fly does
+  not fly during the first second of neural time while the circuit ignites.
 * **Turn** is decoded from the deviation of the left/right balance from its own slow
   running mean (~50 updates), not from the raw difference. The snapshot contains 136
   right descending neurons against 122 left, with an 18% right-side excess of input
@@ -141,7 +141,7 @@ Measured response, each condition applied after the decoder baseline has converg
 
 Read this honestly:
 
-* Light produces a genuine, reproducible differential — left and right separate by
+* Light produces a genuine, reproducible differential. Left and right separate by
   1.22, and the sign reverses with the side. Thermal and taste move the output well
   clear of the null spread.
 * **Odor does not steer.** Full-strength unilateral odor separates left from right

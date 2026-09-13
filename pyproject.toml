@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "fly-kitchen"
 version = "0.1.0"
-description = "An interactive MaleCNS circuit experiment in a 3D kitchen"
-authors = ["Reagan <rrr.chanhiulok@gmail.com>"]
+description = "An interactive MaleCNS Matrix experiment in a 3D kitchen"
+authors = ["Reagan Chan <rrr.chanhiulok@gmail.com>"]
 package-mode = false
 
 [tool.poetry.dependencies]
