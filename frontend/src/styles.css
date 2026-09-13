@@ -2588,3 +2588,281 @@ kbd {
     font-size: 8px;
   }
 }
+
+/* Selected-fly telemetry stays beside the animal list. */
+.matrix-scene {
+  background: #07100b;
+}
+.scene-foot {
+  color: #97ad96;
+}
+.fly-panel {
+  top: 28px;
+  width: 184px;
+  max-height: calc(100% - 74px);
+  background: #111a14f2;
+}
+.fly-entry + .fly-entry {
+  margin-top: 7px;
+}
+.fly-stats {
+  padding: 3px 8px 12px;
+  border-bottom: 1px solid #b8e6a518;
+}
+.fly-stats .matrix-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 8px;
+  padding: 12px 0;
+}
+.fly-stats .metric {
+  padding: 0;
+}
+.fly-stats .metric > span {
+  font-size: 10px;
+}
+.fly-stats .metric strong {
+  font-size: 14px;
+  margin-top: 5px;
+}
+.fly-stats .metric strong small {
+  font-size: 9px;
+}
+.fly-stats .setting-row {
+  gap: 7px;
+  margin: 9px 0 0;
+  font-size: 10px;
+}
+.fly-stats .setting-row > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.fly-stats .toggle {
+  flex: none;
+}
+.camera-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+.matrix-network {
+  z-index: 5;
+  background: #070e0bf5;
+}
+.anatomy-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  color: #d9e6d1;
+}
+.anatomy-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-right: 38px;
+}
+.anatomy-heading h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 5px 0 6px;
+}
+.anatomy-heading p,
+.anatomy-footer {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #92a78f;
+}
+.anatomy-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+}
+.anatomy-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #b4e09518;
+  border-radius: 12px;
+  background: radial-gradient(ellipse at center, #10231a, #07100c 70%);
+  overflow: hidden;
+}
+.anatomy-canvas canvas {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+.anatomy-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  font: 10px var(--mono);
+  color: #88a481;
+  pointer-events: none;
+}
+.anatomy-sidebar {
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.anatomy-neurons {
+  min-height: 0;
+  overflow: auto;
+  flex: 1;
+  margin-top: 12px;
+}
+.anatomy-neurons button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.anatomy-neurons button small {
+  color: #7d9278;
+  margin-left: auto;
+  font: 9px var(--mono);
+}
+.anatomy-neurons button i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+.anatomy-neurons button[aria-pressed="true"] {
+  background: #b1e39a1a;
+  color: #e0ffc7;
+}
+.anatomy-sidebar .node-details {
+  position: static;
+  flex: none;
+  max-height: 60%;
+  overflow-y: auto;
+  background: transparent;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid #b4e09518;
+  font-size: 11px;
+}
+.anatomy-sidebar .node-details h3 {
+  font-size: 15px;
+  margin: 5px 0;
+}
+.anatomy-footer {
+  padding-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 20px;
+}
+.anatomy-footer a {
+  color: #b8ceac;
+}
+.anatomy-reset {
+  border: 1px solid #b4e09530;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+@media (max-width: 800px) {
+  .fly-panel {
+    top: 20px;
+    left: 18px;
+    width: 151px;
+    padding: 8px 5px;
+    max-height: calc(100% - 65px);
+  }
+  .fly-panel-title span,
+  .fly-panel-title small,
+  .fly-item > span:not(.fly-selected-dot),
+  .add-fly span {
+    display: initial;
+  }
+  .fly-panel-title {
+    justify-content: flex-start;
+  }
+  .fly-item {
+    justify-content: flex-start;
+    gap: 9px;
+    padding: 9px 7px;
+  }
+  .fly-selected-dot {
+    margin-left: auto;
+  }
+  .fly-stats {
+    padding: 1px 5px 9px;
+  }
+  .fly-stats .metric strong {
+    font-size: 12px;
+  }
+  .fly-stats .setting-row {
+    font-size: 9px;
+  }
+  .anatomy-view {
+    padding: 18px 12px;
+  }
+  .anatomy-heading h2 {
+    font-size: 18px;
+  }
+  .anatomy-heading {
+    display: block;
+  }
+  .anatomy-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .anatomy-canvas {
+    min-height: 180px;
+  }
+  .anatomy-sidebar {
+    width: 100%;
+    max-height: 145px;
+    flex-direction: row;
+    gap: 12px;
+  }
+  .anatomy-sidebar .node-details {
+    width: 48%;
+    max-height: 100%;
+  }
+  .anatomy-neurons {
+    margin: 0;
+  }
+  .anatomy-footer {
+    font-size: 9px;
+  }
+}
+
+.anatomy-connections {
+  margin-top: 10px;
+  font-size: 10px;
+}
+.anatomy-connections summary {
+  cursor: pointer;
+  color: #bedba9;
+}
+.anatomy-connections > div {
+  max-height: 130px;
+  overflow-y: auto;
+  margin-top: 6px;
+}
+.anatomy-connections button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 3px;
+  text-align: left;
+}
+.anatomy-connections button small {
+  color: #a6b99a;
+  font-family: var(--mono);
+}

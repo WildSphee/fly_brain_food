@@ -1,13 +1,20 @@
 import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { buildKitchen, model } from "./kitchen";
 import type { Kitchen } from "./kitchen";
-import { makeFly } from "./fly";
+import { MatrixBackdrop } from "./matrix";
+import { FlyParticles } from "./particles";
+import { moveColliders } from "./collisions";
+import { loadFlyModel, makeFly } from "./fly";
 import { defaultFoods, initialOptions } from "./types";
 import type { FoodKind, Motor, Options, Sensors, WorldStats } from "./types";
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+// Gameplay thresholds, separate from the connectome's sensory inputs.
+const SEEK_HUNGER = 10;
+const SATISFIED_HUNGER = 3;
 interface FlyAgent {
   id: number;
   color: string;
@@ -16,11 +23,18 @@ interface FlyAgent {
   visual: ReturnType<typeof makeFly>;
   yaw: number;
   energy: number;
-  hunger: number;
+  stomach: number;
   distance: number;
   landed: boolean;
   behavior: string;
-  manualLand: boolean;
+  feedingFood: number | null;
+  mealTime: number;
+  eatParticleTime: number;
+  hurtCooldown: number;
+  seekingFood: boolean;
+  phase: number;
+  cruiseHeight: number;
+  pace: number;
 }
 export class KitchenWorld {
   options: Options = { ...initialOptions };
@@ -36,6 +50,7 @@ export class KitchenWorld {
   };
   motor: Motor = { forward: 0, turn: 0, lift: 0, feeding: 0 };
   connected = false;
+  renderVisible = true;
   elapsed = 0;
   private flies: FlyAgent[] = [];
   private selectedFly = 1;
@@ -58,11 +73,11 @@ export class KitchenWorld {
   set energy(v: number) {
     this.agent.energy = v;
   }
-  get hunger() {
-    return this.agent.hunger;
+  get stomach() {
+    return this.agent.stomach;
   }
-  set hunger(v: number) {
-    this.agent.hunger = v;
+  set stomach(v: number) {
+    this.agent.stomach = v;
   }
   get distance() {
     return this.agent.distance;
@@ -88,25 +103,22 @@ export class KitchenWorld {
   private set behavior(v: string) {
     this.agent.behavior = v;
   }
-  private get manualLand() {
-    return this.agent.manualLand;
-  }
-  private set manualLand(v: boolean) {
-    this.agent.manualLand = v;
-  }
   private scene = new THREE.Scene();
   private camera = new THREE.PerspectiveCamera(43, 1, 0.015, 70);
   private renderer: THREE.WebGLRenderer;
+  private environment: THREE.WebGLRenderTarget;
   private controls: OrbitControls;
   private physics = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   private kitchen: Kitchen;
   private marker: THREE.Mesh;
+  private particles: FlyParticles;
+  private backdrop = new MatrixBackdrop();
   private foodMeshes = new Map<number, THREE.Group>();
+  private foodColliders = new Map<number, RAPIER.Collider>();
   private raf = 0;
   private previous = performance.now();
   private lastStats = 0;
   private accumulator = 0;
-  private keys = new Set<string>();
   private disposed = false;
   private observer: ResizeObserver;
   private nextFoodId = 4;
@@ -136,7 +148,7 @@ export class KitchenWorld {
     onPlaced: () => void,
     onOptions: (patch: Partial<Options>) => void,
   ) {
-    await RAPIER.init();
+    await Promise.all([RAPIER.init(), loadFlyModel()]);
     const engine = new KitchenWorld(
       container,
       onStats,
@@ -172,9 +184,17 @@ export class KitchenWorld {
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
+    this.renderer.toneMappingExposure = 0.95;
+    const room = new RoomEnvironment();
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment = pmrem.fromScene(room, 0.04, 0.1, 100, { size: 128 });
+    this.scene.environment = this.environment.texture;
+    this.scene.background = this.backdrop.texture;
+    this.scene.environmentIntensity = 0;
+    room.dispose();
+    pmrem.dispose();
     this.renderer.setClearColor("#c6c9b8");
     container.append(this.renderer.domElement);
     this.renderer.domElement.tabIndex = 0;
@@ -192,6 +212,8 @@ export class KitchenWorld {
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.update();
     this.kitchen = buildKitchen(this.scene, this.physics, RAPIER);
+    this.particles = new FlyParticles(this.scene);
+    this.addFly();
     this.addFly();
     this.marker = new THREE.Mesh(
       new THREE.RingGeometry(0.13, 0.15, 48),
@@ -218,8 +240,6 @@ export class KitchenWorld {
     this.observer = new ResizeObserver(() => this.resize(container));
     this.observer.observe(container);
     this.resize(container);
-    window.addEventListener("keydown", this.keyDown);
-    window.addEventListener("keyup", this.keyUp);
     window.addEventListener("blur", this.blur);
     this.renderer.domElement.addEventListener(
       "pointerdown",
@@ -238,18 +258,13 @@ export class KitchenWorld {
 
   setOptions(options: Options) {
     if (options.camera !== this.options.camera) {
-      this.keys.clear();
-      if (options.camera === "orbit" || options.camera === "fixed") {
+      if (options.camera === "orbit") {
         this.camera.position.set(8.8, 7.2, 10.7);
         this.controls.target.set(0, 1, 0);
         this.camera.fov = 43;
         this.controls.update();
       } else this.camera.fov = options.camera === "eyes" ? 88 : 58;
       this.camera.updateProjectionMatrix();
-    }
-    if (options.autonomous !== this.options.autonomous) {
-      this.keys.clear();
-      this.manualLand = false;
     }
     this.options = { ...options };
     this.controls.enabled =
@@ -269,27 +284,7 @@ export class KitchenWorld {
       this.camera.updateProjectionMatrix();
     }
   }
-  private keyDown = (e: KeyboardEvent) => {
-    if ((e.target as HTMLElement)?.closest("input,select,textarea,dialog"))
-      return;
-    if (
-      ["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "KeyF"].includes(e.code)
-    ) {
-      e.preventDefault();
-      this.keys.add(e.code);
-      if (e.code === "KeyF" && !e.repeat) {
-        this.manualLand = !this.manualLand;
-        this.onEvent(
-          this.manualLand ? "Landing requested" : "Takeoff requested",
-        );
-      }
-    }
-  };
-  private keyUp = (e: KeyboardEvent) => {
-    this.keys.delete(e.code);
-  };
   private blur = () => {
-    this.keys.clear();
     this.cancelDrag();
   };
   private rayAt(e: PointerEvent) {
@@ -401,6 +396,31 @@ export class KitchenWorld {
       clamp(point.z, -3.3, 3.3),
     );
     if (this.drag.fly) {
+      const body = this.drag.fly.body;
+      const from = body.translation();
+      const movement = point
+        .clone()
+        .sub(new THREE.Vector3(from.x, from.y, from.z));
+      const hit = this.physics.castShape(
+        from,
+        body.rotation(),
+        movement,
+        this.drag.fly.collider.shape,
+        0.002,
+        1,
+        true,
+        undefined,
+        undefined,
+        this.drag.fly.collider,
+        body,
+      );
+      if (hit)
+        point.copy(
+          new THREE.Vector3(from.x, from.y, from.z).addScaledVector(
+            movement,
+            Math.max(0, hit.time_of_impact - 0.005),
+          ),
+        );
       this.drag.fly.body.setTranslation(point, true);
       this.drag.fly.body.setNextKinematicTranslation(point);
     } else {
@@ -419,6 +439,7 @@ export class KitchenWorld {
       food.y = surface.point.y + 0.005;
       food.z = point.z;
       this.foodMeshes.get(food.id)?.position.set(food.x, food.y, food.z);
+      this.updateFoodCollider(food.id);
       const field = this.kitchen.odor.children[this.foods.indexOf(food)];
       field?.position.set(food.x, food.y + 0.2, food.z);
     }
@@ -478,13 +499,23 @@ export class KitchenWorld {
       "#df9678",
       "#f2f2ed",
     ][(id - 1) % 12];
+    const phase = id * 2.399963;
+    const start =
+      id === 1
+        ? { x: -1.6, y: 1.7, z: 1.15, yaw: 2.5, stomach: 76, energy: 92 }
+        : id === 2
+          ? { x: 2.4, y: 2.3, z: -0.5, yaw: -1.1, stomach: 94, energy: 100 }
+          : {
+              x: Math.sin(phase) * 2.6,
+              y: 1.8 + (id % 3) * 0.3,
+              z: Math.cos(phase) * 1.8,
+              yaw: phase,
+              stomach: 65 + ((id * 13) % 32),
+              energy: 88 + ((id * 7) % 13),
+            };
     const body = this.physics.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(
-          -0.7 + ((id - 1) % 4) * 0.6,
-          1.9 + Math.floor((id - 1) / 4) * 0.3,
-          1.6 - Math.floor((id - 1) / 4) * 0.6,
-        )
+        .setTranslation(start.x, start.y, start.z)
         .setLinearDamping(0.35)
         .setCcdEnabled(true)
         .lockRotations(),
@@ -504,19 +535,26 @@ export class KitchenWorld {
       body,
       collider,
       visual,
-      yaw: 2.2 + id * 0.65,
-      energy: 100,
-      hunger: 68,
+      yaw: start.yaw,
+      energy: start.energy,
+      stomach: start.stomach,
       distance: 0,
       landed: false,
-      behavior: "Exploring",
-      manualLand: false,
+      behavior:
+        100 - start.stomach >= SEEK_HUNGER ? "Seeking food" : "Exploring",
+      feedingFood: null,
+      mealTime: 0,
+      eatParticleTime: 0,
+      hurtCooldown: 0,
+      seekingFood: 100 - start.stomach >= SEEK_HUNGER,
+      phase,
+      cruiseHeight: 1.65 + (id % 3) * 0.25,
+      pace: 0.82 + ((id * 7) % 5) * 0.09,
     });
   }
   selectFly(id: number) {
     if (!this.flies.some((f) => f.id === id)) return;
     this.selectedFly = id;
-    this.keys.clear();
     this.trailPositions = [];
     this.trailLine.geometry.dispose();
     this.trailLine.geometry = new THREE.BufferGeometry();
@@ -543,6 +581,8 @@ export class KitchenWorld {
       y: y ?? 1.255,
       z: z ?? 0.8,
       remaining: 1,
+      freshness: 1,
+      meals: 0,
     });
     void this.syncFoods().catch(() =>
       this.onEvent("A food model could not be loaded."),
@@ -571,18 +611,17 @@ export class KitchenWorld {
     this.nextFlyId = 1;
     this.selectedFly = 1;
     this.addFly();
+    this.addFly();
     this.elapsed = 0;
-    this.energy = 100;
-    this.hunger = 68;
-    this.distance = 0;
-    this.yaw = 2.2;
+    this.particles.clear();
     this.accumulator = 0;
-    this.keys.clear();
-    this.manualLand = false;
     this.motor = { forward: 0, turn: 0, lift: 0, feeding: 0 };
-    this.body.setTranslation({ x: -0.7, y: 1.9, z: 1.6 }, true);
-    this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    this.body.resetForces(true);
+    this.foodMeshes.forEach((obj) => this.disposeFood(obj));
+    this.foodMeshes.clear();
+    this.foodColliders.forEach((collider) =>
+      this.physics.removeCollider(collider, true),
+    );
+    this.foodColliders.clear();
     this.foods = defaultFoods();
     this.nextFoodId = 4;
     this.trailPositions = [];
@@ -595,8 +634,11 @@ export class KitchenWorld {
     const version = ++this.foodVersion;
     for (const [id, obj] of this.foodMeshes) {
       if (!this.foods.some((f) => f.id === id)) {
-        this.scene.remove(obj);
+        this.disposeFood(obj);
         this.foodMeshes.delete(id);
+        const collider = this.foodColliders.get(id);
+        if (collider) this.physics.removeCollider(collider, true);
+        this.foodColliders.delete(id);
       }
     }
     for (const f of this.foods)
@@ -607,17 +649,30 @@ export class KitchenWorld {
           [f.x, f.y, f.z],
           f.kind === "banana" ? 0.47 : f.kind === "bread" ? 0.4 : 0.25,
           f.id * 0.8,
+          this.kitchen.materials,
         );
         if (
           this.disposed ||
           version !== this.foodVersion ||
           !this.foods.some((v) => v.id === f.id)
         ) {
-          this.scene.remove(obj);
+          this.disposeFood(obj);
           continue;
         }
         obj.userData.foodId = f.id;
+        obj.userData.baseScale = obj.scale.x;
+        obj.traverse((node) => {
+          if (node instanceof THREE.Mesh) {
+            const materials = Array.isArray(node.material)
+              ? node.material
+              : [node.material];
+            materials.forEach((m) => {
+              m.userData.freshColor = m.color.clone();
+            });
+          }
+        });
         this.foodMeshes.set(f.id, obj);
+        this.updateFoodCollider(f.id);
       }
     this.kitchen.odor.children.forEach((obj) => {
       if (obj instanceof THREE.Mesh) {
@@ -642,7 +697,7 @@ export class KitchenWorld {
       this.kitchen.odor.add(mesh);
     }
   }
-  private odorAt(x: number, y: number, z: number) {
+  private odorAt(x: number, y: number, z: number, bounded = true) {
     let strength = 0;
     for (const f of this.foods) {
       const potency =
@@ -653,6 +708,7 @@ export class KitchenWorld {
             : f.kind === "apple"
               ? 0.65
               : 0.4;
+      if (f.remaining <= 0.08) continue;
       const dz = z - f.z - (this.options.windowOpen ? 0.2 : 0);
       strength +=
         potency *
@@ -661,7 +717,7 @@ export class KitchenWorld {
           -Math.sqrt((x - f.x) ** 2 + (y - f.y) ** 2 * 2 + dz ** 2) * 1.35,
         );
     }
-    return clamp(strength);
+    return bounded ? clamp(strength) : strength;
   }
   private day() {
     return Math.max(0, Math.sin(((this.options.hour - 6) / 12) * Math.PI));
@@ -669,7 +725,7 @@ export class KitchenWorld {
   private lightAt(x: number, y: number, z: number) {
     const sun = this.day() * this.options.sunlight;
     return clamp(
-      0.025 +
+      0.002 +
         sun *
           (0.18 + 0.75 * Math.exp(-((x - 0.6) ** 2 / 5 + (z + 1) ** 2 / 8))) +
         (this.options.lamp
@@ -678,10 +734,7 @@ export class KitchenWorld {
     );
   }
   private temperatureAt(x: number, y: number, z: number) {
-    const hot = this.options.stove
-      ? 22 *
-        Math.exp(-((x - 3.25) ** 2 + (y - 1.1) ** 2 + (z + 2.8) ** 2) / 1.2)
-      : 0;
+    const hot = this.options.stove ? 34 * this.stoveExposure(x, y, z) : 0;
     const cold = this.options.fridge
       ? -10 *
         Math.exp(-((x + 3.6) ** 2 + (y - 0.7) ** 2 + (z + 0.95) ** 2) / 1.3)
@@ -701,12 +754,18 @@ export class KitchenWorld {
       dx = Math.cos(this.yaw) * 0.085,
       dz = -Math.sin(this.yaw) * 0.085;
     const temp = this.temperatureAt(p.x, p.y, p.z);
-    const nearby = this.foods.find(
-      (f) =>
-        Math.hypot(f.x - p.x, f.z - p.z) < 0.26 &&
-        Math.abs(p.y - f.y) < 0.19 &&
-        f.remaining > 0,
-    );
+    const nearby = this.foods.find((f) => {
+      if (f.remaining <= 0.08) return false;
+      const contact = this.foodColliders.get(f.id)?.projectPoint(p, true)?.point;
+      return (
+        (contact &&
+          Math.hypot(contact.x - p.x, contact.y - p.y, contact.z - p.z) <
+            0.06) ||
+        (Math.hypot(f.x - p.x, f.z - p.z) < 0.26 &&
+          p.y >= f.y - 0.04 &&
+          p.y <= f.y + 0.32)
+      );
+    });
     this.sensors = {
       odor_left: this.odorAt(p.x - dx, p.y, p.z - dz),
       odor_right: this.odorAt(p.x + dx, p.y, p.z + dz),
@@ -720,8 +779,11 @@ export class KitchenWorld {
   }
 
   private step(dt: number) {
-    if (this.options.autonomous && !this.connected) return;
-    if (this.drag?.fly === this.agent) return;
+    if (!this.connected) return;
+    if (this.drag?.fly === this.agent) {
+      this.finishMeal(this.agent);
+      return;
+    }
     const p = this.body.translation(),
       v = this.body.linvel(),
       { temp, nearby } = this.sense();
@@ -729,40 +791,60 @@ export class KitchenWorld {
       turn = 0,
       targetY = p.y,
       feeding = false;
-    const autonomous =
-      this.options.autonomous || this.agent.id !== this.selectedFly;
-    if (autonomous) {
-      drive = this.connected ? this.motor.forward : 0;
-      turn = this.connected ? this.motor.turn * 2.2 : 0;
-      // Explicit engineered flight stabilizer: no target-food coordinates enter steering.
-      // A small exploratory saccade is gated by actual descending-neuron activity.
-      turn += Math.sin(this.elapsed * 1.1 + this.agent.id) * 0.32 * drive;
-      targetY = 1.6 + Math.sin(this.elapsed * 0.55) * 0.4;
-      if (
-        this.sensors.odor_left + this.sensors.odor_right > 1.0 &&
-        this.hunger > 18
-      )
-        targetY = 1.25;
-      feeding = !!nearby && this.motor.feeding > 0.05;
-      if (feeding) {
-        drive = 0;
-        targetY = nearby!.y + 0.022;
+    const hunger = 100 - this.stomach;
+    if (hunger >= SEEK_HUNGER) this.agent.seekingFood = true;
+    else if (hunger <= SATISFIED_HUNGER) this.agent.seekingFood = false;
+    const canEat =
+      this.stomach <
+      (this.agent.feedingFood === nearby?.id ? 99 : 100 - SEEK_HUNGER);
+    drive = this.options.silenced ? 0 : this.motor.forward;
+    turn = this.motor.turn * 2.2;
+    // The actual descending readout drives each fly's engineered stabilizer.
+    turn +=
+      Math.sin(
+        this.elapsed * (0.7 + this.agent.pace * 0.4) + this.agent.phase,
+      ) *
+      0.5 *
+      drive;
+    targetY =
+      this.agent.cruiseHeight +
+      Math.sin(this.elapsed * 0.55 * this.agent.pace + this.agent.phase) * 0.3;
+    if (this.agent.seekingFood && drive > 0.01) {
+      // Engineered local plume following, not a claim of neural olfactory navigation.
+      // Unsaturated samples preserve the gradient close to overlapping food plumes.
+      const sample = 0.16;
+      const gx =
+        this.odorAt(p.x + sample, p.y, p.z, false) -
+        this.odorAt(p.x - sample, p.y, p.z, false);
+      const gz =
+        this.odorAt(p.x, p.y, p.z + sample, false) -
+        this.odorAt(p.x, p.y, p.z - sample, false);
+      // Approach above the plume's surface origin to clear boards and plate rims.
+      const approachY = p.y - 0.22;
+      const gy =
+        this.odorAt(p.x, approachY + sample, p.z, false) -
+        this.odorAt(p.x, approachY - sample, p.z, false);
+      const gradient = Math.hypot(gx, gz, gy);
+      if (gradient > 0.0001) {
+        const heading = Math.atan2(gx, gz) - this.yaw;
+        const error = Math.atan2(Math.sin(heading), Math.cos(heading));
+        turn = clamp(error * 3, -2.8, 2.8) + this.motor.turn * 0.12;
+        drive *= clamp(Math.cos(error), 0.18, 1);
+        targetY = clamp(p.y + (gy / gradient) * 0.45, 0.04, 3.1);
       }
-    } else {
-      drive =
-        (this.keys.has("KeyW") ? 1 : 0) - (this.keys.has("KeyS") ? 0.65 : 0);
-      turn =
-        (this.keys.has("KeyA") ? 1.8 : 0) - (this.keys.has("KeyD") ? 1.8 : 0);
-      targetY = clamp(
-        p.y +
-          (this.keys.has("KeyE") ? 0.45 : 0) -
-          (this.keys.has("KeyQ") ? 0.45 : 0),
-        0.03,
-        3.3,
-      );
-      feeding = !!nearby && (this.manualLand || p.y < nearby.y + 0.1);
     }
-    if (autonomous && drive > 0.01) {
+    // Each fly's own taste contact can initiate a meal while neural drive is active.
+    // The shared brain may be tasting nothing at the selected fly's position.
+    feeding =
+      !!nearby &&
+      canEat &&
+      !this.options.silenced &&
+      (this.motor.feeding > 0.05 || this.motor.forward > 0.01);
+    if (feeding) {
+      drive = 0;
+      targetY = nearby!.y + 0.022;
+    }
+    if (drive > 0.01) {
       // Avoid imminent physical collisions using a short range feeler, independently of the brain.
       const ray = new RAPIER.Ray(
         { x: p.x, y: p.y, z: p.z },
@@ -775,6 +857,12 @@ export class KitchenWorld {
         undefined,
         undefined,
         this.collider,
+        undefined,
+        (collider) =>
+          !this.agent.seekingFood ||
+          ![...this.foodColliders.values()].some(
+            (food) => food.handle === collider.handle,
+          ),
       );
       if (hit) {
         turn += 2.6;
@@ -784,11 +872,9 @@ export class KitchenWorld {
       if (this.sensors.heat > 0.25 || this.sensors.cold > 0.3)
         turn += 1.8 * drive;
     }
-    const canFly =
-      this.energy > 1 &&
-      (autonomous ? drive > 0.005 && !feeding : !this.manualLand);
+    const canFly = this.energy > 1 && drive > 0.005 && !feeding;
     this.yaw += turn * dt;
-    const speed = drive * 0.95;
+    const speed = drive * 0.95 * this.agent.pace;
     const m = this.body.mass();
     this.body.resetForces(true);
     this.body.addForce(
@@ -804,30 +890,140 @@ export class KitchenWorld {
     this.landed = Math.abs(this.body.linvel().y) < 0.04 && !canFly;
     this.behavior = feeding
       ? "Feeding"
-      : this.options.autonomous && !this.connected
+      : !this.connected
         ? "Brain offline"
-        : this.options.silenced && this.options.autonomous
+        : this.options.silenced
           ? "Neurons silenced"
           : canFly
-            ? "Exploring"
+            ? this.agent.seekingFood
+              ? "Seeking food"
+              : "Exploring"
             : this.landed
               ? "Resting"
               : "Landing";
+    this.agent.hurtCooldown = Math.max(0, this.agent.hurtCooldown - dt);
     if (feeding && nearby) {
-      nearby.remaining = Math.max(0, nearby.remaining - dt * 0.013);
+      if (this.agent.feedingFood !== nearby.id) {
+        this.finishMeal(this.agent);
+        this.agent.feedingFood = nearby.id;
+      }
+      this.agent.mealTime += dt;
       this.energy = clamp(this.energy + dt * 3, 0, 100);
-      this.hunger = clamp(this.hunger - dt * 5, 0, 100);
-      if (nearby.remaining === 0) this.removeFood(nearby.id);
+      this.stomach = clamp(this.stomach + dt * 5, 0, 100);
+      this.agent.eatParticleTime -= dt;
+      if (this.agent.eatParticleTime <= 0) {
+        this.particles.emit("eating", p, this.yaw);
+        this.agent.eatParticleTime = 0.16;
+      }
     } else {
-      this.energy = clamp(
-        this.energy -
-          dt * (canFly ? 0.025 : 0.006) -
-          Math.max(0, temp - 35) * dt * 0.015,
-        0,
-        100,
-      );
-      this.hunger = clamp(this.hunger + dt * 0.035, 0, 100);
+      this.finishMeal(this.agent);
+      this.energy = clamp(this.energy - dt * (canFly ? 0.025 : 0.006), 0, 100);
+      this.stomach = clamp(this.stomach - dt * (canFly ? 0.12 : 0.06), 0, 100);
     }
+    // All actual harm goes through one path, including heat while eating.
+    const heatDamage = Math.max(0, temp - 35) * 0.09;
+    const coldDamage = Math.max(0, 12 - temp) * 0.06;
+    const starvation = this.stomach <= 0 ? 0.12 : 0;
+    this.hurt(this.agent, (heatDamage + coldDamage + starvation) * dt);
+  }
+
+  private stoveExposure(x: number, y: number, z: number) {
+    return Math.exp(
+      -((x - 3.25) ** 2 + ((y - 1.35) * 1.3) ** 2 + (z + 2.8) ** 2) / 2.2,
+    );
+  }
+  private hurt(fly: FlyAgent, amount: number) {
+    if (amount <= 0 || fly.energy <= 0) return;
+    fly.energy = clamp(fly.energy - amount, 0, 100);
+    fly.behavior = "Hurt";
+    if (fly.hurtCooldown <= 0) {
+      this.particles.emit("hurt", fly.body.translation());
+      fly.hurtCooldown = 0.3;
+    }
+  }
+  private finishMeal(fly: FlyAgent) {
+    if (fly.feedingFood !== null && fly.mealTime >= 0.5) {
+      const food = this.foods.find((f) => f.id === fly.feedingFood);
+      if (food) {
+        food.meals++;
+        food.freshness = Math.max(0, food.freshness - 0.06);
+      }
+    }
+    fly.feedingFood = null;
+    fly.mealTime = 0;
+  }
+  private ageFoods(dt: number) {
+    for (const food of this.foods) {
+      if (food.meals === 0) continue;
+      const feeding = this.flies.some((fly) => fly.feedingFood === food.id);
+      // Each completed meal accelerates spoilage; food lasts minutes after eating.
+      food.freshness = Math.max(
+        0,
+        food.freshness - dt * (0.0015 + Math.min(food.meals, 8) * 0.0005),
+      );
+      if (!feeding)
+        food.remaining = Math.max(
+          0,
+          food.remaining - dt * (0.0005 + (1 - food.freshness) * 0.003),
+        );
+      const mesh = this.foodMeshes.get(food.id);
+      if (mesh) {
+        mesh.scale.setScalar(
+          mesh.userData.baseScale * Math.cbrt(food.remaining),
+        );
+        this.updateFoodCollider(food.id);
+        mesh.traverse((node) => {
+          if (!(node instanceof THREE.Mesh)) return;
+          const materials = Array.isArray(node.material)
+            ? node.material
+            : [node.material];
+          materials.forEach((m) => {
+            m.color
+              .copy(m.userData.freshColor)
+              .lerp(new THREE.Color("#655735"), (1 - food.freshness) * 0.8);
+            m.roughness = 0.45 + (1 - food.freshness) * 0.5;
+          });
+        });
+      }
+    }
+    const decayed = this.foods.filter((food) => food.remaining <= 0);
+    if (decayed.length) {
+      this.foods = this.foods.filter((food) => food.remaining > 0);
+      void this.syncFoods();
+      this.onEvent("Decayed food returned to the compost");
+    }
+  }
+  private updateFoodCollider(id: number) {
+    const object = this.foodMeshes.get(id);
+    if (!object) return;
+    const box = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    const half = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    half.max(new THREE.Vector3(0.001, 0.001, 0.001));
+    const collider = this.foodColliders.get(id);
+    if (collider) {
+      collider.setHalfExtents(half);
+      collider.setTranslation(center);
+    } else
+      this.foodColliders.set(
+        id,
+        this.physics.createCollider(
+          RAPIER.ColliderDesc.cuboid(half.x, half.y, half.z)
+            .setTranslation(center.x, center.y, center.z)
+            .setFriction(0.65),
+        ),
+      );
+  }
+  private disposeFood(object: THREE.Group) {
+    object.removeFromParent();
+    object.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      node.geometry.dispose();
+      const materials = Array.isArray(node.material)
+        ? node.material
+        : [node.material];
+      materials.forEach((material) => material.dispose());
+    });
   }
 
   private frame = (now: number) => {
@@ -839,11 +1035,12 @@ export class KitchenWorld {
       this.accumulator += delta * this.options.speed;
       let steps = 0;
       while (this.accumulator >= 1 / 60 && steps++ < 12) {
-        if (!this.options.autonomous || this.connected) {
+        if (this.connected) {
           this.elapsed += 1 / 60;
           if (this.options.cycle)
             this.options.hour = (this.options.hour + 1 / 1800) % 24;
           const previous = this.flies.map((f) => ({ ...f.body.translation() }));
+          const velocities = this.flies.map((f) => ({ ...f.body.linvel() }));
           for (const f of this.flies) {
             this.steppingFly = f;
             this.step(1 / 60);
@@ -851,14 +1048,37 @@ export class KitchenWorld {
           this.steppingFly = null;
           this.physics.timestep = 1 / 60;
           this.physics.step();
+          this.ageFoods(1 / 60);
+          this.particles.step(1 / 60);
           this.flies.forEach((f, i) => {
             const p = f.body.translation();
+            const before = velocities[i],
+              after = f.body.linvel();
+            const impact = Math.hypot(
+              before.x - after.x,
+              before.y - after.y,
+              before.z - after.z,
+            );
+            if (impact > 0.7 && f.hurtCooldown <= 0 && this.drag?.fly !== f) {
+              let touching = false;
+              this.physics.contactPairsWith(f.collider, () => {
+                touching = true;
+              });
+              if (touching) this.hurt(f, (impact - 0.6) * 1.5);
+            }
             const bounded = {
               x: clamp(p.x, -4.45, 4.45),
-              y: clamp(p.y, 0.03, 3.45),
+              y: clamp(p.y, 0.012, 3.45),
               z: clamp(p.z, -3.45, 3.45),
             };
             if (p.x !== bounded.x || p.y !== bounded.y || p.z !== bounded.z) {
+              const boundaryImpact = Math.hypot(
+                p.x !== bounded.x ? after.x : 0,
+                p.y !== bounded.y ? after.y : 0,
+                p.z !== bounded.z ? after.z : 0,
+              );
+              if (boundaryImpact > 0.7 && f.hurtCooldown <= 0)
+                this.hurt(f, (boundaryImpact - 0.6) * 1.5);
               f.body.setTranslation(bounded, true);
               f.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
             }
@@ -890,13 +1110,12 @@ export class KitchenWorld {
         w.rotation.z =
           (i ? 1 : -1) *
           (this.options.running && !f.landed
-            ? Math.sin(now * 0.095 * this.options.speed) * 0.8
+            ? Math.sin(this.elapsed * 95 * f.pace + f.phase) * 0.8
             : 0.15);
       });
     }
     this.marker.position.set(p.x, p.y - 0.02, p.z);
-    this.marker.visible =
-      this.options.camera === "orbit" || this.options.camera === "fixed";
+    this.marker.visible = this.options.camera === "orbit";
     if (this.options.running && this.elapsed - this.lastTrail > 0.15) {
       this.lastTrail = this.elapsed;
       this.trailPositions.push(new THREE.Vector3(p.x, p.y, p.z));
@@ -908,12 +1127,17 @@ export class KitchenWorld {
     }
     this.trailLine.visible =
       this.options.trail && this.options.camera !== "eyes";
-    this.kitchen.sun.intensity = this.day() * this.options.sunlight * 4.2;
+    const daylight = this.day() * this.options.sunlight;
+    this.backdrop.update(this.elapsed, daylight);
+    this.scene.environmentIntensity =
+      daylight * 0.28 + (this.options.lamp ? 0.08 : 0);
+    this.kitchen.sun.intensity = daylight * 2.8;
+    this.kitchen.fill.intensity = daylight * 0.45;
     this.kitchen.sun.position.x =
       5 * Math.cos(((this.options.hour - 6) / 12) * Math.PI);
     this.kitchen.ambient.intensity =
-      0.15 + this.day() * 1.75 + (this.options.lamp ? 0.38 : 0);
-    this.kitchen.lamp.intensity = this.options.lamp ? 10 : 0;
+      0.018 + daylight * 0.95 + (this.options.lamp ? 0.1 : 0);
+    this.kitchen.lamp.intensity = this.options.lamp ? 7 : 0;
     this.kitchen.glow.visible = this.options.stove;
     this.kitchen.flames.visible = this.options.stove;
     this.kitchen.flames.children.forEach((flame, i) => {
@@ -936,13 +1160,16 @@ export class KitchenWorld {
     this.kitchen.thermal.children[1].visible = this.options.fridge;
     this.kitchen.odor.visible = this.options.overlay === "odor";
     this.kitchen.lightField.visible =
-      this.options.overlay === "light" && this.day() > 0.05;
+      this.options.overlay === "light" &&
+      (daylight > 0.02 || this.options.lamp);
     this.kitchen.windowPane.rotation.y = this.options.windowOpen ? -0.55 : 0;
-    (this.kitchen.sky.material as THREE.MeshStandardMaterial).color.set(
-      this.day() > 0.1 ? "#c2d7c4" : "#202f48",
-    );
+    moveColliders(this.kitchen.movingColliders);
+    const skyMaterial = this.kitchen.sky.material as THREE.MeshStandardMaterial;
+    skyMaterial.color.set("#080d16").lerp(new THREE.Color("#a6bfcc"), daylight);
+    skyMaterial.emissive.set("#b8ccd9");
+    skyMaterial.emissiveIntensity = daylight * 0.35;
     this.renderer.setClearColor(
-      new THREE.Color("#5d6b68").lerp(new THREE.Color("#c6c9b8"), this.day()),
+      new THREE.Color("#06090f").lerp(new THREE.Color("#929da3"), daylight),
     );
     if (this.options.camera === "follow" && !this.drag) {
       const wanted = new THREE.Vector3(
@@ -965,7 +1192,7 @@ export class KitchenWorld {
       );
     } else if (this.options.camera === "orbit" && !this.drag)
       this.controls.update();
-    this.renderer.render(this.scene, this.camera);
+    if (this.renderVisible) this.renderer.render(this.scene, this.camera);
     if (now - this.lastStats > 200) {
       this.lastStats = now;
       const { temp } = this.sense();
@@ -980,7 +1207,7 @@ export class KitchenWorld {
         speed: Math.hypot(v.x, v.y, v.z),
         altitude: p.y,
         energy: this.energy,
-        hunger: this.hunger,
+        stomach: this.stomach,
         temperature: temp,
         light: (this.sensors.light_left + this.sensors.light_right) / 2,
         odor: (this.sensors.odor_left + this.sensors.odor_right) / 2,
@@ -1002,8 +1229,6 @@ export class KitchenWorld {
     cancelAnimationFrame(this.raf);
     this.observer.disconnect();
     this.controls.dispose();
-    window.removeEventListener("keydown", this.keyDown);
-    window.removeEventListener("keyup", this.keyUp);
     window.removeEventListener("blur", this.blur);
     this.renderer.domElement.removeEventListener(
       "pointerdown",
@@ -1030,6 +1255,10 @@ export class KitchenWorld {
         materials.forEach((m) => m.dispose());
       }
     });
+    this.particles.dispose();
+    this.kitchen.materials.dispose();
+    this.environment.dispose();
+    this.backdrop.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
     this.physics.free();

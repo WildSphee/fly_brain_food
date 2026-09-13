@@ -11,7 +11,7 @@ export function watchConsole(page: Page): string[] {
 export async function openHabitat(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByRole("heading", { name: "Kitchen", exact: true }),
+    page.getByRole("link", { name: "Fly Matrix home", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".loading-scene")).toHaveCount(0, {
     timeout: 90000,

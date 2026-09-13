@@ -1,4 +1,7 @@
 import asyncio
+import gzip
+import json
+from pathlib import Path
 import logging
 from contextlib import asynccontextmanager
 
@@ -15,6 +18,8 @@ logger = logging.getLogger('fly-kitchen')
 async def lifespan(app: FastAPI):
     app.state.circuit = Circuit()
     app.state.graph = build_graph(app.state.circuit)
+    with gzip.open(Path(__file__).parent / "data/malecns-anatomy.json.gz", "rt") as source:
+        app.state.anatomy = json.load(source)
     app.state.sessions = 0
     yield
 
@@ -52,6 +57,11 @@ def build_graph(c: Circuit) -> dict:
 @app.get('/api/circuit/graph')
 def graph():
     return app.state.graph
+
+
+@app.get('/api/circuit/anatomy')
+def anatomy():
+    return app.state.anatomy
 
 
 @app.websocket('/api/simulation')

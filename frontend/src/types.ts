@@ -1,4 +1,4 @@
-export type CameraMode = "orbit" | "follow" | "eyes" | "fixed";
+export type CameraMode = "orbit" | "follow" | "eyes";
 export type Overlay = "none" | "odor" | "thermal" | "light";
 export type FoodKind = "banana" | "apple" | "bread" | "cheese";
 export interface Food {
@@ -8,10 +8,11 @@ export interface Food {
   y: number;
   z: number;
   remaining: number;
+  freshness: number;
+  meals: number;
 }
 export interface Options {
   running: boolean;
-  autonomous: boolean;
   camera: CameraMode;
   hour: number;
   cycle: boolean;
@@ -84,7 +85,7 @@ export interface WorldStats {
   speed: number;
   altitude: number;
   energy: number;
-  hunger: number;
+  stomach: number;
   temperature: number;
   light: number;
   odor: number;
@@ -98,7 +99,6 @@ export interface WorldStats {
 }
 export const initialOptions: Options = {
   running: true,
-  autonomous: true,
   camera: "orbit",
   hour: 10.5,
   cycle: false,
@@ -116,9 +116,36 @@ export const initialOptions: Options = {
   trail: true,
 };
 export const defaultFoods = (): Food[] => [
-  { id: 1, kind: "banana", x: -0.8, y: 1.25, z: 0.5, remaining: 1 },
-  { id: 2, kind: "apple", x: 0.5, y: 1.25, z: 0.6, remaining: 1 },
-  { id: 3, kind: "bread", x: 1.1, y: 1.25, z: 0.35, remaining: 1 },
+  {
+    id: 1,
+    kind: "banana",
+    x: -0.8,
+    y: 1.25,
+    z: 0.5,
+    remaining: 1,
+    freshness: 1,
+    meals: 0,
+  },
+  {
+    id: 2,
+    kind: "apple",
+    x: 0.5,
+    y: 1.25,
+    z: 0.6,
+    remaining: 1,
+    freshness: 1,
+    meals: 0,
+  },
+  {
+    id: 3,
+    kind: "bread",
+    x: 1.1,
+    y: 1.25,
+    z: 0.35,
+    remaining: 1,
+    freshness: 1,
+    meals: 0,
+  },
 ];
 export const foodNames: Record<FoodKind, string> = {
   banana: "Ripe banana",

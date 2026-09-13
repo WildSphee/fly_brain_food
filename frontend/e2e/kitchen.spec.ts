@@ -17,7 +17,6 @@ test("clean layout, cameras, speed, pause, and minimizing", async ({
   for (const [name, label] of [
     ["Follow", "Following fly 1"],
     ["Fly eye", "Fly 1 eye"],
-    ["Fixed", "Fixed"],
     ["Orbit", "Orbit"],
   ]) {
     await page
@@ -33,7 +32,9 @@ test("clean layout, cameras, speed, pause, and minimizing", async ({
     page.getByRole("button", { name: "2× speed", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Pause simulation" }).click();
-  await expect(page.locator(".live-pill")).toHaveText("PAUSED");
+  await expect(
+    page.getByRole("button", { name: "Resume simulation" }),
+  ).toBeVisible();
   await page.waitForTimeout(300); // Let the final telemetry snapshot arrive.
   const frozen = await page.locator(".sim-time").innerText();
   await page.waitForTimeout(1100);
@@ -53,22 +54,22 @@ test("multiple flies have distinct colors and positions; selected fly is tracked
   await page.getByRole("button", { name: "Pause simulation" }).click();
   await page.getByRole("button", { name: "Add fly", exact: true }).click();
   await page.getByRole("button", { name: "Add fly", exact: true }).click();
-  await expect(page.locator(".fly-item")).toHaveCount(3);
+  await expect(page.locator(".fly-item")).toHaveCount(4);
   const flies = await page.evaluate(() =>
     (window as any).__world.flies.map((f: any) => ({
       color: f.color,
       p: f.body.translation(),
     })),
   );
-  expect(new Set(flies.map((f: any) => f.color)).size).toBe(3);
-  expect(new Set(flies.map((f: any) => JSON.stringify(f.p))).size).toBe(3);
+  expect(new Set(flies.map((f: any) => f.color)).size).toBe(4);
+  expect(new Set(flies.map((f: any) => JSON.stringify(f.p))).size).toBe(4);
   await page.getByRole("button", { name: "Select fly 3" }).click();
   await page
     .getByRole("button", { name: "Follow camera", exact: true })
     .click();
   await expect(page.locator(".camera-hint")).toHaveText("Following fly 3");
   await page.getByRole("button", { name: "Reset experiment" }).click();
-  await expect(page.locator(".fly-item")).toHaveCount(1);
+  await expect(page.locator(".fly-item")).toHaveCount(2);
   await expect(
     page.getByRole("button", { name: "Select fly 1" }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -80,7 +81,7 @@ test("drag a fly and apple; direct appliance clicks update settings and visuals"
   await inspectWorld(page);
   await openHabitat(page);
   await page.getByRole("button", { name: "Pause simulation" }).click();
-  await page.getByRole("button", { name: "Fixed camera", exact: true }).click();
+  await page.getByRole("button", { name: "Orbit camera", exact: true }).click();
   const flyPos = await page.evaluate(() => {
     const p = (window as any).__world.body.translation();
     return [p.x, p.y + 0.045, p.z];
@@ -155,10 +156,9 @@ test("all flies stay inside through extended 2× flight at the open window", asy
   const result = await page.evaluate(() => {
     const w = (window as any).__world;
     cancelAnimationFrame(w.raf);
-    w.options = { ...w.options, autonomous: false, speed: 2, windowOpen: true };
+    w.options = { ...w.options, speed: 2, windowOpen: true };
     w.connected = true;
     w.motor = { forward: 1, turn: 0, lift: 1, feeding: 0 };
-    w.keys.add("KeyW");
     w.flies.forEach((f: any, i: number) => {
       f.body.setTranslation({ x: 0.5 + i * 0.3, y: 2.2, z: -3.3 }, true);
       f.yaw = Math.PI;
@@ -188,7 +188,7 @@ test("all flies stay inside through extended 2× flight at the open window", asy
       count: w.flies.length,
     };
   });
-  expect(result.count).toBe(2);
+  expect(result.count).toBe(3);
   expect(result.elapsed).toBeGreaterThan(110);
   expect(result.maxViolation).toBe(0);
 });
@@ -217,7 +217,9 @@ test("environment food placement, overlays, and video download", async ({
   }
   await page.getByRole("tab", { name: "Simulation", exact: true }).click();
   await page.getByRole("button", { name: "Record video", exact: true }).click();
-  await expect(page.locator(".recording-pill")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stop & save video", exact: true }),
+  ).toBeVisible();
   await page.waitForTimeout(2200);
   const downloadPromise = page.waitForEvent("download");
   await page
@@ -229,7 +231,9 @@ test("environment food placement, overlays, and video download", async ({
   const chunks: Buffer[] = [];
   for await (const c of stream) chunks.push(c as Buffer);
   expect(Buffer.concat(chunks).length).toBeGreaterThan(1000);
-  await expect(page.locator(".recording-pill")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Record video", exact: true }),
+  ).toBeVisible();
 });
 
 test("phone controls collapse and keep the habitat accessible", async ({
@@ -237,7 +241,9 @@ test("phone controls collapse and keep the habitat accessible", async ({
 }) => {
   await page.setViewportSize({ width: 414, height: 900 });
   await openHabitat(page);
-  await page.getByRole("button", { name: "Minimize settings" }).click();
+  await expect(
+    page.getByRole("button", { name: "Expand settings" }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () =>
@@ -246,7 +252,7 @@ test("phone controls collapse and keep the habitat accessible", async ({
     ),
   ).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "Add fly", exact: true }).click();
-  await expect(page.locator(".fly-item")).toHaveCount(2);
+  await expect(page.locator(".fly-item")).toHaveCount(3);
   await page.getByRole("button", { name: "Expand settings" }).click();
   await expect(page.getByRole("tablist")).toBeVisible();
 });

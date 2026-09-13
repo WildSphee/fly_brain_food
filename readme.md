@@ -1,7 +1,7 @@
 # Fly Matrix
 
 An interactive 3D kitchen with a real MaleCNS connectome circuit, live neural telemetry,
-physical flight, editable food sources, and first/third-person and fixed/orbit cameras.
+physical flight, editable food sources, and orbit, follow, and fly-eye cameras.
 React + TypeScript + Three.js + Rapier frontend; Python + FastAPI + Pydantic + Poetry backend.
 
 ## Start
@@ -44,16 +44,25 @@ needed. No LLM calls or mock LLM outputs exist.
 ## Play
 
 - The right panel groups **Simulation**, **Environment**, and **Brain** settings. Use its chevron to minimize or expand it.
-- **Add fly** on the left creates up to 12 flies with distinct colors and starting positions. Select a fly in the list or click it in the room.
+- The room starts with **two flies** in different locations and heights: one at 24% hunger / 92% energy, the other at 6% hunger / 100% energy. Their headings, cruise heights, pace, and exploration phases differ. **Add fly** creates up to 12. Select a fly in the left list or in the room to see its speed, height, energy, hunger, and flight-trail toggle beneath its entry.
 - Drag a fly to move it through the camera plane; drag food to move it across the table, counter, or floor. Drag empty space to orbit and scroll to zoom.
 - Click the pendant light, fridge, window, or stove to toggle them. The fridge doors animate and lit burners show flames. Flies stay inside even with the window open.
-- Camera shortcuts: **1** Orbit, **2** Follow selected fly, **3** Fly eye, **4** Fixed. The Simulation tab also offers **0.5×**, **1×**, and **2×** room speed.
-- Choose **Manual**: W/S forward/back, A/D turn, E/Q up/down, F land/takeoff for the selected fly. **Space** pauses/resumes.
+- Camera shortcuts: **1** Orbit, **2** Follow selected fly, **3** Fly eye. The Simulation tab also offers **0.5×**, **1×**, and **2×** room speed.
+- The neural circuit drives flight. **Space** pauses/resumes; flies and food remain draggable.
 - In Environment, choose a food icon then click a surface to place it. Escape cancels. Odor, thermal, and light overlays show approximate fields.
+- **Neural circuit** opens a rotatable 3D view of 44 real MaleCNS neuron skeletons from the simulated circuit. Select a neuron to highlight its branches and connected neurons. Expand its measured links to inspect input/output directions and synapse counts, or follow a link to another neuron.
+- The room has a dense binary-rain background with bright leading digits, frozen when paused and static with reduced-motion preferences.
+- **Hunger** rises as the fly’s stomach empties and falls during feeding. Food seeking starts at **10% hunger** through a local odor-gradient controller gated by neural drive. Each fly can eat on its own food contact, including when unselected. Green/gold crumbs show eating. Food stays after a meal, then browns and shrinks over several minutes; additional meals accelerate rot.
+- The stove has a wider heat zone. Heat, extreme cold, starvation, and hard impacts cost energy and produce orange/red hurt particles. Turning the stove off removes its heat.
+- **Sunlight intensity** controls daylight, including ambient/fill light and the outdoor view. At zero the room is dark; the kitchen lamp remains independently switchable.
 - **Record video** records the 3D camera view at 30 FPS. **Stop & save video** downloads WebM (or MP4 where supported). Recording runs in real time and excludes the interface.
-- **Reset** restores one fly, the habitat, and the neural seed. The Brain tab keeps neural telemetry, silencing, sensory gain, and the circuit viewer. About the model contains provenance and scientific limits.
+- **Reset** restores two flies, the habitat, and the neural seed. The Brain tab keeps neural telemetry, silencing, sensory gain, and the circuit viewer. Scientific provenance and limitations are documented in `docs/science.md`.
 
-Each fly has independent physics, exploration, energy, and hunger. The selected fly supplies sensory input to one shared neural circuit; all flies receive its motor output. Additional flies do not create independent connectome simulations. Room speed changes physical simulation time; neural integration retains its own clock.
+Each fly has independent physics, exploration, energy, and stomach. The selected fly supplies sensory input to one shared neural circuit; all flies receive its motor output. Additional flies do not create independent connectome simulations. Room speed changes physical simulation time; neural integration retains its own clock.
+
+Flies physically collide and share food; social sensing and courtship are not modeled.
+Anatomical Flybody fly meshes and textured Poly Haven plants are bundled locally;
+see [asset sources, licenses, and conversion details](docs/assets.md).
 
 ## Scientific scope
 
@@ -77,13 +86,13 @@ a genuine left/right differential (1.22 separation, sign reversing with side), a
 temperature move the output clearly. **Odor does not steer**: full-strength unilateral odor
 separates left from right by 0.077, below the ±0.16 null spread. Odor raises population
 firing but yields no reliable turning signal through this decoder. What you see when the fly
-approaches food is the engineered explorer and physics, not olfactory navigation. Several
-reflexes — thermal avoidance, odor-driven altitude, feeding — are hard-coded rules reading
-raw sensors, and `hunger`/`energy` are game variables with no link to any neuron.
+approaches food is the engineered odor-gradient controller and physics, not neural olfactory navigation. Several
+reflexes — thermal avoidance, food seeking, feeding — are hard-coded rules reading
+raw sensors, and `stomach`/`energy` are game variables with no link to any neuron.
 
 See [model equations, sources, and limitations](docs/science.md),
 [asset credits](docs/assets.md), and [feature/review tracker](phase.md).
-The UI also exposes provenance and limitations through **About the model**.
+The circuit viewer links to the original MaleCNS dataset and identifies the displayed anatomical sample.
 
 ## Develop and verify
 
@@ -113,7 +122,10 @@ Do not leave temporary app servers running.
 Refresh data explicitly with `.venv/bin/python scripts/import_connectome.py`. This performs
 read-only neuPrint queries using the server-side credential and atomically replaces the
 public snapshot; it does not fabricate missing data. Download/processing is outside the
-normal startup path. `python3 scripts/fetch_assets.py` reproduces local model assets.
+normal startup path. `python3 scripts/fetch_assets.py` reproduces local model assets;
+`python3 scripts/fetch_materials.py` reproduces local CC0 material maps.
+`.venv/bin/python scripts/import_anatomy.py` downloads the bounded anatomical sample
+using the server-side neuPrint credential; runtime anatomy loads from the local snapshot.
 
 Work stays on `master`; commit authorship uses the user's existing Git identity only.
 Review outcomes, unfinished limitations, and the maximum four-round critic loop are in
@@ -171,4 +183,3 @@ Cambridge Logo
 MRC LMB Logo
 Google Research Logo
 The Male CNS dataset is licensed under CC-BY.
-

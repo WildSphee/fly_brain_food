@@ -1,78 +1,49 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
+let template: THREE.Group;
+let loading: Promise<void> | undefined;
+
+export function loadFlyModel() {
+  loading ??= new GLTFLoader()
+    .loadAsync("/models/fruitfly.glb")
+    .then((gltf) => {
+      template = gltf.scene;
+    });
+  return loading;
+}
+
+// Simplified anatomical Flybody meshes, Google DeepMind / HHMI Janelia,
+// Apache-2.0. Import provenance and transformations: docs/assets.md.
 export function makeFly(color = "#c6eaa0") {
-  const group = new THREE.Group();
-  const dark = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(color).multiplyScalar(0.42),
-    roughness: 0.58,
+  const group = template.clone(true);
+  const materials = new Map<THREE.Material, THREE.Material>();
+  group.traverse((node) => {
+    if (!(node instanceof THREE.Mesh)) return;
+    node.geometry = node.geometry.clone();
+    const copy = (source: THREE.MeshStandardMaterial) => {
+      if (!materials.has(source)) {
+        const material = source.clone();
+        // Preserve natural tan/brown anatomy; identification color stays subtle.
+        if (material.name === "body")
+          material.color.lerp(new THREE.Color(color), 0.06);
+        if (material.transparent) material.depthWrite = false;
+        materials.set(source, material);
+      }
+      return materials.get(source)!;
+    };
+    node.material = Array.isArray(node.material)
+      ? node.material.map(copy)
+      : copy(node.material);
+    node.castShadow = true;
+    node.receiveShadow = true;
   });
-  const abdomen = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.65,
-  });
-  const red = new THREE.MeshStandardMaterial({
-    color: "#8f3529",
-    roughness: 0.45,
-  });
-  function sphere(pos: number[], scale: number[], material: THREE.Material) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), material);
-    m.position.set(...(pos as [number, number, number]));
-    m.scale.set(...(scale as [number, number, number]));
-    m.castShadow = true;
-    group.add(m);
-    return m;
-  }
-  sphere([0, 0, 0], [0.031, 0.032, 0.041], dark);
-  sphere([0, -0.006, -0.052], [0.032, 0.027, 0.055], abdomen);
-  for (let i = 0; i < 4; i++)
-    sphere(
-      [0, -0.005, -0.024 - i * 0.019],
-      [0.032 - i * 0.003, 0.026 - i * 0.002, 0.004],
-      dark,
-    );
-  sphere([0, 0.01, 0.041], [0.033, 0.027, 0.024], dark);
-  sphere([-0.024, 0.016, 0.049], [0.017, 0.022, 0.017], red);
-  sphere([0.024, 0.016, 0.049], [0.017, 0.022, 0.017], red);
-  const wings: THREE.Group[] = [];
-  const wingMat = new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(color).lerp(new THREE.Color("white"), 0.75),
-    transparent: true,
-    opacity: 0.68,
-    side: THREE.DoubleSide,
-    roughness: 0.2,
-    metalness: 0.12,
-    depthWrite: false,
-  });
-  for (const side of [-1, 1]) {
-    const pivot = new THREE.Group();
-    pivot.position.set(side * 0.02, 0.026, 0.006);
-    group.add(pivot);
-    const wing = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), wingMat);
-    wing.scale.set(0.034, 0.0015, 0.078);
-    wing.position.set(side * 0.048, 0, -0.042);
-    wing.rotation.y = side * -0.6;
-    pivot.add(wing);
-    wings.push(pivot);
-    for (let i = 0; i < 3; i++) {
-      const points = [
-        new THREE.Vector3(side * 0.02, -0.006, 0.025 - i * 0.025),
-        new THREE.Vector3(side * 0.06, -0.026, 0.035 - i * 0.034),
-        new THREE.Vector3(side * 0.077, -0.05, 0.056 - i * 0.05),
-      ];
-      const leg = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(points),
-        new THREE.LineBasicMaterial({ color: "#494532" }),
-      );
-      group.add(leg);
-    }
-    const antenna = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(side * 0.012, 0.03, 0.06),
-        new THREE.Vector3(side * 0.022, 0.048, 0.074),
-      ]),
-      new THREE.LineBasicMaterial({ color: "#50432b" }),
-    );
-    group.add(antenna);
-  }
+  const size = new THREE.Box3()
+    .setFromObject(group)
+    .getSize(new THREE.Vector3());
+  group.scale.setScalar(0.18 / size.z);
+  const wings = ["wing_right", "wing_left"].map((name) =>
+    group.getObjectByName(name)!,
+  );
   return { group, wings };
 }

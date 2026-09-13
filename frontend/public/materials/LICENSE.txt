@@ -1,0 +1,8 @@
+ambientCG materials by Lennart Demes
+Source: https://ambientcg.com/
+License: Creative Commons CC0 1.0 Universal
+License information: https://docs.ambientcg.com/license/
+Legal code: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+All included texture maps are released into the public domain under CC0.
+See manifest.json for individual source pages, downloads, and SHA-256 hashes.

@@ -100,41 +100,74 @@ test.describe("neural service", () => {
   });
 });
 
-test.describe("circuit and help views", () => {
-  test("neural circuit tab draws measured edges and inspects a neuron", async ({
-    page,
-  }) => {
-    await openHabitat(page);
-    await page.getByRole("tab", { name: "Brain", exact: true }).click();
-    await page.getByRole("button", { name: "Neural circuit" }).click();
-    const svg = page.locator("svg.network-svg");
-    await expect(svg).toBeVisible({ timeout: 30_000 });
-    expect(await svg.locator("line").count()).toBeGreaterThan(50);
+test("anatomical circuit uses measured skeletons and selects a real neuron", async ({
+  page,
+}, testInfo) => {
+  await openHabitat(page);
+  await page.getByRole("tab", { name: "Brain", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Neural circuit", exact: true })
+    .click();
+  await expect(page.locator(".anatomy-canvas canvas")).toBeVisible({
+    timeout: 45000,
+  });
+  await expect(
+    page.getByText("MALE CNS · RECONSTRUCTED ANATOMY"),
+  ).toBeVisible();
+  const neurons = page.locator(".anatomy-neurons button");
+  expect(await neurons.count()).toBeGreaterThan(30);
+  await neurons.first().click();
+  await expect(page.locator(".node-details")).toContainText(/Body ID \d{4,}/);
+  await expect(neurons.first()).toHaveAttribute("aria-pressed", "true");
+  const links = page.locator(".anatomy-connections");
+  await links.locator("summary").click();
+  await expect(links.locator("button").first()).toBeVisible();
+  const partner = await links
+    .locator("button")
+    .first()
+    .getAttribute("data-neuron-id");
+  await links.locator("button").first().click();
+  await expect(page.locator(".node-details")).toContainText(
+    `Body ID ${partner}`,
+  );
+  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expect(neurons.first()).toHaveAttribute("aria-pressed", "false");
+  await page.screenshot({
+    path: testInfo.outputPath("anatomical-circuit.png"),
+  });
+  await expect(
+    page.getByRole("link", { name: /MaleCNS · FlyEM/ }),
+  ).toHaveAttribute("href", "https://male-cns.janelia.org/download/");
+  await page.getByRole("button", { name: "Close neural circuit" }).click();
+  await expect(page.locator(".anatomy-canvas")).toHaveCount(0);
+});
 
-    const nodes = svg.locator("g[role='button']");
-    await expect
-      .poll(() => nodes.count(), { timeout: 20_000 })
-      .toBeGreaterThan(50);
-    await expect(page.locator(".node-details")).toContainText(
-      /illustrative, not anatomical/i,
+test("selected fly owns the left telemetry and simplified controls", async ({
+  page,
+}) => {
+  await openHabitat(page);
+  await expect(page.locator(".fly-item")).toHaveCount(2);
+  const left = page.getByRole("complementary", { name: "Flies", exact: true });
+  for (const label of ["Speed", "Height", "Energy", "Hunger"])
+    await expect(left.getByText(label, { exact: true })).toBeVisible();
+  await expect(
+    left.getByRole("switch", { name: "Flight trail" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Select fly 2" }).click();
+  await expect(page.getByLabel("Fly 2 stats", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Fly 1 stats", { exact: true })).toHaveCount(0);
+  for (const name of [
+    "Manual",
+    "Fixed camera",
+    "How to play",
+    "About the model",
+  ])
+    await expect(page.getByRole("button", { name, exact: true })).toHaveCount(
+      0,
     );
-    await nodes.first().click({ force: true });
-    // The inspector shows the original MaleCNS body id and transmitter.
-    await expect(page.locator(".node-details")).toContainText(/Body ID \d{4,}/);
-  });
-
-  test("help and provenance dialogs open", async ({ page }) => {
-    await openHabitat(page);
-    await page.getByRole("tab", { name: "Brain", exact: true }).click();
-    await page.getByRole("button", { name: "How to play" }).click();
-    await expect(page.locator("dialog")).toBeVisible();
-    await page.getByRole("button", { name: "Close dialog" }).click();
-
-    await page.getByRole("button", { name: /About the model/ }).click();
-    const dialog = page.locator("dialog");
-    await expect(dialog).toContainText(/not a validated reconstruction/i);
-    await expect(
-      dialog.getByRole("link", { name: /MaleCNS · Janelia/ }),
-    ).toHaveAttribute("href", /male-cns\.janelia\.org/);
-  });
+  await expect(page.locator(".camera-grid button")).toHaveCount(3);
+  await left.getByRole("switch", { name: "Flight trail" }).click();
+  await expect(
+    left.getByRole("switch", { name: "Flight trail" }),
+  ).toHaveAttribute("aria-checked", "false");
 });

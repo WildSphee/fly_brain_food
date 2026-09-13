@@ -147,8 +147,8 @@ Read this honestly:
 * **Odor does not steer.** Full-strength unilateral odor separates left from right
   by 0.077, which is below the ±0.16 spread of the null condition. Odor measurably
   raises population rate, but through this decoder it yields no reliable turning
-  signal. If the fly appears to turn toward food, that is the engineered explorer
-  and the physical approach, not olfactory navigation.
+  signal. Turning toward food comes from the engineered odor-gradient controller
+  and physical approach, not from neural olfactory navigation.
 
 Side annotations do not establish turning direction, and these descending
 populations are generic, not validated flight command cells.
@@ -161,25 +161,58 @@ The body controller is engineered and several of its reflexes bypass the circuit
 entirely. Stated plainly so no one credits them to the connectome:
 
 * Altitude stabilisation, imminent-collision avoidance, and a small periodic
-  exploratory turn (a sinusoid) gated by neural drive.
+  exploratory turn gated by neural drive. Each fly has its own starting position,
+  heading, fullness, energy, cruise height, pace, and phase. Reset reproduces them.
 * **Thermal avoidance is a hard-coded rule** reading the raw sensor: above 0.25 heat
   or 0.3 cold the controller adds a turn directly, without consulting the TRNs.
-* High local odor lowers the target altitude — again a direct sensor rule.
+* At **10% hunger** the controller follows finite differences of the local odor
+  field horizontally and vertically, gated by nonzero neural forward drive.
+  It uses unsaturated plume samples so gradients survive close to food. Seeking
+  ends below 3% hunger, with a meal continuing to 99% fullness. This is an
+  engineered foraging aid, not behavior emerging from olfactory neurons.
 * The **feeding** command is `tanh(gustatory rate / 40) × raw taste sensor`, so it is
   a neural-times-sensor hybrid rather than a pure neural readout, and the world gates
-  it again on physical proximity.
-* `hunger` and `energy` are game variables. Nothing feeds them into any neuron; they
-  gate flight and altitude in the controller only.
+  it again on physical proximity. A fly's own food contact can also initiate feeding
+  when shared neural forward drive is active. This fixes an unselected fly being
+  unable to eat because the selected fly is not tasting food. Silencing suppresses
+  both routes. The contact route is a controller rule, not a second neural readout.
+* `stomach` and `energy` are game variables. Nothing feeds them into any neuron; they
+  gate flight, altitude, and feeding in the controller only. Stomach is fullness,
+  decreases over time, and refills while eating. Food spoilage, thermal damage,
+  starvation, and impact damage are game rules, not biological predictions.
 
 Food coordinates are never used as a steering target. Silencing neurons removes
-autonomous drive; manual mode intentionally bypasses neural motor control.
+autonomous drive. Dragging remains an explicit user manipulation of body position.
+
+Previously both flies started with 32% fullness (68% hunger). There was no working
+food-seeking controller: fullness below 82% merely allowed feeding and odor-driven
+descent. Fullness drains by 0.12 percentage points per world second in flight and
+0.06 at rest, so the former initial reserve lasted about 267 seconds of flight.
+Those drain rates and starvation damage are unchanged. New initial fullness is
+76% and 94%, with energy 92% and 100% respectively.
+
+### Multiple flies and social behavior
+
+There is still one shared connectome simulation per browser. The selected fly
+provides its sensory input, and all flies receive its motor output. Individual
+body states and controllers differ; the flies do not have independent neural states.
+
+Flies can physically collide and affect shared food, but there is no encoded
+conspecific vision, touch, courtship song, pheromone field, or social controller.
+Some relevant annotations occur in the snapshot (15 DA1 projection neurons and
+12 pC1 neurons), but their presence does not establish a complete or functioning
+social pathway. In real Drosophila, pheromone-responsive neurons such as Or67d
+and higher circuits contribute to social behavior; see
+[Kurtovic et al.](https://www.nature.com/articles/nature05672) and
+[Sun et al.](https://www.nature.com/articles/s41467-020-19102-3).
 
 ## Body, room, and clocks
 
 Rapier integrates a dynamic, continuously collision-detected body using gravity and
 feedback forces at 60 Hz. The collision radius is enlarged to 12 mm, with visibly
-enlarged wings/body. This aids interaction but is not biological scale. Leg geometry
-and wing animation are illustrative. There is no articulated gait, wall adhesion,
+enlarged wings/body. This aids interaction but is not biological scale. The visible
+body uses simplified anatomical Flybody meshes; wing animation remains illustrative.
+There is no articulated gait, wall adhesion,
 or flapping-wing aerodynamic solver.
 
 The room uses bounded analytic odor, light, and temperature fields; it is not a fluid
@@ -197,3 +230,27 @@ timescale. Speed controls the world clock only; neural time is reported separate
 
 This is an experimental connectome playground. It makes no claim of validated fly
 behavior, biological consciousness, or a complete organism emulation.
+
+
+## Anatomical circuit viewer
+
+The viewer uses **44 actual MaleCNS neuron skeletons** from the same 4,390-neuron
+circuit, with 365,149 source centerline points and 201 measured connections among
+those displayed neurons. Selection takes up to six high-connectivity, type-diverse
+neurons per sensory/circuit group, balancing the annotated sides where possible.
+This is a representative anatomical sample, not the complete CNS.
+
+`scripts/import_anatomy.py` downloads SWC skeletons from neuPrint. Original XYZ
+coordinates (8 nm voxel units) and parent links are retained without invented
+branches or filling disconnected fragments. The display uniformly scales and
+centers these coordinates and uses X / −Z / Y as display axes. Lines show neuron
+centerlines, not the locations of individual synapses. Their brightness reflects
+available **simulated** activity; omitted telemetry samples are not represented as
+zero firing rates. Selecting a neuron shows connection counts within this sample.
+
+Exact sources and SWC hashes are recorded per neuron in
+`backend/data/malecns-anatomy.json.gz`. `anatomy-manifest.json` records the snapshot
+hash and the hash of the circuit it accompanies. The view works offline after
+installation. Data: [MaleCNS](https://male-cns.janelia.org/download/),
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), FlyEM / HHMI Janelia,
+University of Cambridge, MRC LMB, and Google Research.

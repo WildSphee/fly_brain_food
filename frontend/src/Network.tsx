@@ -1,162 +1,315 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Telemetry } from "./types";
-interface Node {
+
+interface Neuron {
   id: string;
   type: string;
   group: string;
   nt: string;
   side: string;
+  modality: string | null;
+  points: [number, number, number, number][];
 }
-interface Graph {
-  nodes: Node[];
+interface Anatomy {
+  neurons: Neuron[];
   edges: [string, string, number][];
-  view: string;
+  dataset: string;
+  coordinate_space: string;
 }
+const colors: Record<string, string> = {
+  visual: "#7cbcff",
+  olfactory: "#c9eb85",
+  taste: "#e2bc7d",
+  thermal: "#e98f97",
+  cb_intrinsic: "#8dd7b8",
+  descending_neuron: "#b7a2f5",
+  ascending_neuron: "#77cdd1",
+  vnc_intrinsic: "#b1c992",
+};
+const neuronColor = (n: Neuron) => colors[n.modality || n.group] || "#afc5a4";
+
 export function Network({ telemetry }: { telemetry: Telemetry | null }) {
-  const [graph, setGraph] = useState<Graph | null>(null),
-    [error, setError] = useState(""),
-    [selected, setSelected] = useState<Node | null>(null);
+  const [anatomy, setAnatomy] = useState<Anatomy | null>(null);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const host = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const telemetryRef = useRef(telemetry);
+  telemetryRef.current = telemetry;
+  const resetView = useRef<() => void>(() => {});
   useEffect(() => {
-    const abort = new AbortController();
-    fetch("/api/circuit/graph", { signal: abort.signal })
+    const controller = new AbortController();
+    fetch("/api/circuit/anatomy", { signal: controller.signal })
       .then((r) => {
-        if (!r.ok) throw Error("Circuit graph unavailable");
+        if (!r.ok) throw Error("Neuron anatomy unavailable");
         return r.json();
       })
-      .then(setGraph)
+      .then(setAnatomy)
       .catch((e) => {
         if (e.name !== "AbortError") setError(e.message);
       });
-    return () => abort.abort();
+    return () => controller.abort();
   }, []);
-  if (!graph)
+  useEffect(() => {
+    if (!anatomy || !host.current) return;
+    const container = host.current;
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.setClearColor(0, 0);
+    renderer.domElement.setAttribute(
+      "aria-label",
+      "3D reconstruction of measured MaleCNS neuron skeletons. Drag to rotate, scroll to zoom, or select a neuron from the list.",
+    );
+    container.append(renderer.domElement);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 30);
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.minDistance = 0.5;
+    controls.maxDistance = 8;
+    const bounds = new THREE.Box3();
+    const point = new THREE.Vector3();
+    for (const neuron of anatomy.neurons)
+      for (const p of neuron.points)
+        bounds.expandByPoint(point.set(p[0], -p[2], p[1]));
+    const center = bounds.getCenter(new THREE.Vector3());
+    const size = bounds.getSize(new THREE.Vector3());
+    const scale = 2 / Math.max(size.x, size.y, size.z);
+    const neighbors = new Map<string, Set<string>>();
+    for (const [a, b] of anatomy.edges) {
+      if (!neighbors.has(a)) neighbors.set(a, new Set());
+      if (!neighbors.has(b)) neighbors.set(b, new Set());
+      neighbors.get(a)!.add(b);
+      neighbors.get(b)!.add(a);
+    }
+    const lines = anatomy.neurons.map((neuron) => {
+      const positions: number[] = [];
+      for (const p of neuron.points) {
+        if (p[3] < 0) continue; // Preserve the source's disconnected fragments.
+        const parent = neuron.points[p[3]];
+        for (const q of [p, parent])
+          positions.push(
+            (q[0] - center.x) * scale,
+            (-q[2] - center.y) * scale,
+            (q[1] - center.z) * scale,
+          );
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(positions, 3),
+      );
+      const line = new THREE.LineSegments(
+        geometry,
+        new THREE.LineBasicMaterial({
+          color: neuronColor(neuron),
+          transparent: true,
+          opacity: 0.6,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      line.userData.neuronId = neuron.id;
+      scene.add(line);
+      return line;
+    });
+    resetView.current = () => {
+      camera.position.set(0.1, 0, 3.4);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
+    resetView.current();
+    const resize = () => {
+      const width = container.clientWidth,
+        height = container.clientHeight;
+      if (!width || !height) return;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    resize();
+    let down = { x: 0, y: 0 };
+    const pointerDown = (e: PointerEvent) => {
+      down = { x: e.clientX, y: e.clientY };
+    };
+    const pick = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      const ray = new THREE.Raycaster();
+      ray.params.Line.threshold = 0.012;
+      ray.setFromCamera(
+        new THREE.Vector2(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          1 - ((e.clientY - rect.top) / rect.height) * 2,
+        ),
+        camera,
+      );
+      const hit = ray.intersectObjects(lines)[0];
+      if (hit) setSelected(hit.object.userData.neuronId);
+    };
+    renderer.domElement.addEventListener("pointerdown", pointerDown);
+    renderer.domElement.addEventListener("pointerup", pick);
+    let frame = 0;
+    const draw = () => {
+      const active = new Map(
+        telemetryRef.current?.activity.map((n) => [n.id, n.hz]) || [],
+      );
+      for (const line of lines) {
+        const id = line.userData.neuronId;
+        line.material.opacity = selectedRef.current
+          ? selectedRef.current === id
+            ? 1
+            : neighbors.get(selectedRef.current)?.has(id)
+              ? 0.4
+              : 0.045
+          : active.has(id) && active.get(id)! > 0
+            ? 0.85
+            : 0.42;
+      }
+      controls.update();
+      renderer.render(scene, camera);
+      frame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      controls.dispose();
+      renderer.domElement.removeEventListener("pointerdown", pointerDown);
+      renderer.domElement.removeEventListener("pointerup", pick);
+      lines.forEach((line) => {
+        line.geometry.dispose();
+        line.material.dispose();
+      });
+      renderer.dispose();
+      renderer.domElement.remove();
+    };
+  }, [anatomy]);
+  if (!anatomy)
     return (
       <div className="graph-loading">
-        {error || "Reading measured connections…"}
+        {error || "Loading measured neuron anatomy…"}
       </div>
     );
-  const positions = new Map(
-    graph.nodes.map((n, i) => {
-      const angle = i * 2.39996;
-      const radius = 35 + Math.sqrt(i / graph.nodes.length) * 205;
-      return [
-        n.id,
-        {
-          x: 340 + Math.cos(angle) * radius * 1.25,
-          y: 285 + Math.sin(angle) * radius,
-        },
-      ];
-    }),
-  );
-  const active = new Map(telemetry?.activity.map((n) => [n.id, n.hz]) || []);
+  const neuron = anatomy.neurons.find((n) => n.id === selected);
+  const activity = telemetry?.activity.find((n) => n.id === selected);
+  const neuronById = new Map(anatomy.neurons.map((n) => [n.id, n]));
+  const partners = selected
+    ? anatomy.edges.filter(([a, b]) => a === selected || b === selected)
+    : [];
   return (
-    <div className="network-view">
-      <div className="network-heading">
-        <h2>Neural circuit</h2>
-        <p>120 neurons · select a node</p>
-      </div>
-      <svg
-        className="network-svg"
-        viewBox="0 0 680 570"
-        aria-label="Sample of measured MaleCNS connectivity"
-      >
-        {graph.edges.map(([a, b, w]) => {
-          const p = positions.get(a)!,
-            q = positions.get(b)!;
-          return (
-            <line
-              key={`${a}-${b}`}
-              x1={p.x}
-              y1={p.y}
-              x2={q.x}
-              y2={q.y}
-              stroke={
-                selected && (a === selected.id || b === selected.id)
-                  ? "#dcf7b2"
-                  : "#82a77c"
-              }
-              strokeOpacity={
-                selected?.id === a || selected?.id === b ? 0.7 : 0.13
-              }
-              strokeWidth={Math.min(2, w / 500 + 0.25)}
-            />
-          );
-        })}
-        {graph.nodes.map((n) => {
-          const p = positions.get(n.id)!,
-            exc = n.nt === "acetylcholine";
-          return (
-            <g
-              key={n.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Neuron ${n.id} ${n.type}`}
-              onClick={() => setSelected(n)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") setSelected(n);
-              }}
-            >
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={selected?.id === n.id ? 9 : active.has(n.id) ? 6 : 3.7}
-                fill={
-                  exc
-                    ? "#c8ed9e"
-                    : n.nt === "gaba" || n.nt === "glutamate"
-                      ? "#c195d3"
-                      : "#849289"
-                }
-                opacity={active.has(n.id) ? 1 : 0.75}
-              />
-              <title>
-                {n.type} · {n.id} · {n.nt}
-              </title>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="network-legend">
-        <span>
-          <i className="legend-dot green" />
-          Excitatory
-        </span>
-        <span>
-          <i className="legend-dot purple" />
-          Inhibitory assumption
-        </span>
-        <span>
-          <i className="legend-dot gray" />
-          Unmodeled transmitter
-        </span>
-      </div>
-      <div className="node-details">
-        {selected ? (
-          <>
-            <span className="eyebrow">SELECTED NEURON</span>
-            <h3>
-              {selected.type} <small>{selected.side}</small>
-            </h3>
-            <p>
-              Body ID {selected.id} · {selected.nt}
-              <br />
-              {selected.group.replaceAll("_", " ")}
-            </p>
-            <a
-              href={`https://neuprint.janelia.org/?dataset=male-cns%3Av1.0`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Explore in neuPrint ↗
-            </a>
-          </>
-        ) : (
+    <div className="anatomy-view">
+      <div className="anatomy-heading">
+        <div>
+          <span className="eyebrow">MALE CNS · RECONSTRUCTED ANATOMY</span>
+          <h2>Neural circuit</h2>
           <p>
-            Lines represent real synaptic connections.
-            <br />
-            This layout is illustrative, not anatomical.
+            {anatomy.neurons.length} real neurons from the 4,390-neuron circuit
+            · {anatomy.edges.length} measured connections in this sample
           </p>
-        )}
+        </div>
+        <button
+          className="anatomy-reset"
+          onClick={() => {
+            resetView.current();
+            setSelected(null);
+          }}
+        >
+          Reset view
+        </button>
+      </div>
+      <div className="anatomy-content">
+        <div className="anatomy-canvas" ref={host}>
+          <span className="anatomy-hint">
+            Drag to rotate · Scroll to zoom · Click a branch
+          </span>
+        </div>
+        <aside className="anatomy-sidebar" aria-label="Reconstructed neurons">
+          <div className="node-details">
+            {neuron ? (
+              <>
+                <span className="eyebrow">SELECTED NEURON</span>
+                <h3>
+                  {neuron.type} <small>{neuron.side}</small>
+                </h3>
+                <p>
+                  Body ID {neuron.id}
+                  <br />
+                  {neuron.nt}
+                  <br />
+                  {partners.length} measured links in this sample
+                  <br />
+                  {activity
+                    ? `${activity.hz.toFixed(1)} Hz · model activity`
+                    : "Outside the live activity sample"}
+                </p>
+                {partners.length > 0 && (
+                  <details className="anatomy-connections" key={neuron.id}>
+                    <summary>{partners.length} measured links</summary>
+                    <div>
+                      {[...partners]
+                        .sort((a, b) => b[2] - a[2])
+                        .map(([a, b, weight]) => {
+                          const outgoing = a === neuron.id;
+                          const id = outgoing ? b : a;
+                          const target = neuronById.get(id)!;
+                          return (
+                            <button
+                              key={`${a}-${b}`}
+                              data-neuron-id={id}
+                              title={`${outgoing ? "Output to" : "Input from"} ${target.type} (${id}) · ${weight} synapses`}
+                              onClick={() => setSelected(id)}
+                            >
+                              <span>
+                                {outgoing ? "→" : "←"} {target.type}
+                              </span>
+                              <small>{weight}</small>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </details>
+                )}
+              </>
+            ) : (
+              <p>
+                Select a neuron to highlight its branches and connected neurons.
+              </p>
+            )}
+          </div>
+          <div className="anatomy-neurons">
+            {anatomy.neurons.map((n) => (
+              <button
+                key={n.id}
+                aria-label={`Neuron ${n.id} ${n.type}`}
+                aria-pressed={selected === n.id}
+                onClick={() => setSelected(selected === n.id ? null : n.id)}
+              >
+                <i style={{ background: neuronColor(n) }} />
+                <span>{n.type}</span>
+                <small>{n.side}</small>
+              </button>
+            ))}
+          </div>
+        </aside>
+      </div>
+      <div className="anatomy-footer">
+        <span>
+          Original EM coordinates · Centerline branches, not synapse locations ·
+          Brightness reflects model activity
+        </span>
+        <a
+          href="https://male-cns.janelia.org/download/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          MaleCNS · FlyEM / Cambridge / MRC LMB / Google · CC BY 4.0 ↗
+        </a>
       </div>
     </div>
   );

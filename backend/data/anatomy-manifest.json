@@ -1,0 +1,14 @@
+{
+  "dataset": "male-cns:v1.0",
+  "license": "CC-BY-4.0",
+  "source": "https://male-cns.janelia.org/download/",
+  "attribution": "FlyEM / HHMI Janelia, University of Cambridge, MRC LMB, Google Research",
+  "fetched_at": "2026-09-12T07:21:19.435621+00:00",
+  "coordinate_space": "MaleCNS EM; xyz in 8 nm voxels",
+  "selection": "Up to six high-connectivity, type-diverse circuit neurons per group, balanced by annotated side where available.",
+  "circuit_sha256": "6e7b381df8a73229c217f5bf9ac9c667b8e505bb55c9952d0135be8718b65eba",
+  "neurons": 44,
+  "points": 365149,
+  "edges": 201,
+  "sha256": "081f1573d2b7ba734ad212404e1ac9fe59c7744d2b54d84b1d94d2a38d3d18b3"
+}

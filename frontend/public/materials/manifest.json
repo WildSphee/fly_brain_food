@@ -1,0 +1,107 @@
+[
+  {
+    "id": "Marble012",
+    "source": "https://ambientcg.com/view?id=Marble012",
+    "download": "https://ambientcg.com/get?file=Marble012_1K-JPG.zip&download=1",
+    "license": "CC0-1.0",
+    "archive_sha256": "b04384c6d49ce73baeb70db7ea4abfe9948fc9b74b9fd92c3766970662bf2c43",
+    "files": [
+      {
+        "file": "Marble012_1K-JPG_Color.jpg",
+        "sha256": "a34b55c889c6b3819d2c351b6409bfd0baf0a0a55b073441850627dfebcdcd1e"
+      },
+      {
+        "file": "Marble012_1K-JPG_NormalGL.jpg",
+        "sha256": "2e9a56525ffbb7e80854b19985a5c921f91192698ea337f4834192479ba0063b"
+      },
+      {
+        "file": "Marble012_1K-JPG_Roughness.jpg",
+        "sha256": "f7afd636d6cca0b470549959c514976186df58ac1013016b6c3919910a6d3a04"
+      }
+    ]
+  },
+  {
+    "id": "Wood049",
+    "source": "https://ambientcg.com/view?id=Wood049",
+    "download": "https://ambientcg.com/get?file=Wood049_1K-JPG.zip&download=1",
+    "license": "CC0-1.0",
+    "archive_sha256": "74ec51bcf5ddfc2e9af6205dc5cbcc90ad51c22117e013ff8b1c7258f8ecbc69",
+    "files": [
+      {
+        "file": "Wood049_1K-JPG_Color.jpg",
+        "sha256": "451ee4dd719628289b4969f75dc583b5f77f8471d5d885ba5015fd90e7e5ce61"
+      },
+      {
+        "file": "Wood049_1K-JPG_NormalGL.jpg",
+        "sha256": "e9aaec13f9c6199e7ec440433005a8c52a88332f26a3887fc057179089fb747a"
+      },
+      {
+        "file": "Wood049_1K-JPG_Roughness.jpg",
+        "sha256": "7683f29e71c24b987e4a7dcc74d5a9ed5ab4cac2e145d507799ba9c9c2c4ef54"
+      }
+    ]
+  },
+  {
+    "id": "Metal032",
+    "source": "https://ambientcg.com/view?id=Metal032",
+    "download": "https://ambientcg.com/get?file=Metal032_1K-JPG.zip&download=1",
+    "license": "CC0-1.0",
+    "archive_sha256": "9e4f363905a647958c273154fa125d2a6440892d0e583f9b3af24bb08b5afc3c",
+    "files": [
+      {
+        "file": "Metal032_1K-JPG_Color.jpg",
+        "sha256": "49493d6ade78ccbbbd270c6a15e4b4c9b1a097e66ddf28a1073de3e85712d9af"
+      },
+      {
+        "file": "Metal032_1K-JPG_NormalGL.jpg",
+        "sha256": "8537c1015de5cc33d20231e5b6aa27309edcb983e1c37e608d08bb00f733747d"
+      },
+      {
+        "file": "Metal032_1K-JPG_Roughness.jpg",
+        "sha256": "55d3eee2b69008ad3701b18977495531d0e3515105102e56f40a4d1098d10bce"
+      }
+    ]
+  },
+  {
+    "id": "Plaster001",
+    "source": "https://ambientcg.com/view?id=Plaster001",
+    "download": "https://ambientcg.com/get?file=Plaster001_1K-JPG.zip&download=1",
+    "license": "CC0-1.0",
+    "archive_sha256": "944b4831016e42ace4a89422e4e7190912ca2f7fed6f561354c48ec7bb54d3a4",
+    "files": [
+      {
+        "file": "Plaster001_1K-JPG_Color.jpg",
+        "sha256": "d3fe43282859ab7293ad41f2fa3c29f02df077e5bc326cf90a65cc588a4ac5a4"
+      },
+      {
+        "file": "Plaster001_1K-JPG_NormalGL.jpg",
+        "sha256": "ea293c335a0b9243f0a825573b81304b8f99e60b2c067e493d0792adf96dfc72"
+      },
+      {
+        "file": "Plaster001_1K-JPG_Roughness.jpg",
+        "sha256": "6028dbe3cb2ea250eacf3fb87d2c4e5ae8c2a7ff10ecad7883c27d721f2f8e88"
+      }
+    ]
+  },
+  {
+    "id": "Fabric032",
+    "source": "https://ambientcg.com/view?id=Fabric032",
+    "download": "https://ambientcg.com/get?file=Fabric032_1K-JPG.zip&download=1",
+    "license": "CC0-1.0",
+    "archive_sha256": "d52dff13a089a05cbf53f4790eb7059742eb76c6927f584fdaa483eb0059b6f7",
+    "files": [
+      {
+        "file": "Fabric032_1K-JPG_Color.jpg",
+        "sha256": "9b8435528e63b4c7948bec000eee5067c41c5de51798a0a2c6563503306f44de"
+      },
+      {
+        "file": "Fabric032_1K-JPG_NormalGL.jpg",
+        "sha256": "c25867f1aa79f64e62f1bab9f162713b590d1c83984b60f7c9cd14c19e6b3961"
+      },
+      {
+        "file": "Fabric032_1K-JPG_Roughness.jpg",
+        "sha256": "3d4db8efebfd3236e42651b4690f19c686d56a11e6656b1735b30c9019444e81"
+      }
+    ]
+  }
+]
