@@ -1128,7 +1128,12 @@ export class KitchenWorld {
     this.trailLine.visible =
       this.options.trail && this.options.camera !== "eyes";
     const daylight = this.day() * this.options.sunlight;
-    this.backdrop.update(this.elapsed, daylight);
+    this.backdrop.update(
+      this.elapsed,
+      daylight,
+      this.renderer.domElement.clientWidth,
+      this.renderer.domElement.clientHeight,
+    );
     this.scene.environmentIntensity =
       daylight * 0.28 + (this.options.lamp ? 0.08 : 0);
     this.kitchen.sun.intensity = daylight * 2.8;

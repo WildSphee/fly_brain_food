@@ -57,7 +57,11 @@ run the app. Source and output SHA-256 hashes are in
 Architecture, food icons, illustrative brain graphic, and interface are
 original procedural work in this repository. The neural viewer uses real MaleCNS centerline skeletons in measured coordinates;
 its data provenance is described in `docs/science.md`. The binary-rain background
-is original procedural canvas work.
+uses a local binary-only canvas implementation inspired by
+[Matrix Background 2019 by Boujjou Achraf (wefiy)](https://codepen.io/wefiy/pen/WPpEwo).
+It keeps the reference's dense falling columns, translucent black fade, and random
+column restarts, using green `0` and `1` characters. The texture follows the viewport,
+respects reduced motion and simulation pause, and requires no CodePen runtime embed.
 
 DM Sans and DM Mono are from Google Fonts under the SIL Open Font License. Fonts and
 license texts are stored under `frontend/public/fonts`. No font CDN is contacted at runtime.
