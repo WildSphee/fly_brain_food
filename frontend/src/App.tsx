@@ -63,6 +63,8 @@ const initialStats: WorldStats = {
   hour: 10.5,
 };
 const num = (value: number) => new Intl.NumberFormat("en-US").format(value);
+const flyLabel = (id: number) =>
+  id === 1 ? "Neo" : id === 2 ? "Trinity" : String(id).padStart(2, "0");
 const hour = (h: number) =>
   `${Math.floor(h).toString().padStart(2, "0")}:${Math.floor((h % 1) * 60)
     .toString()
@@ -374,13 +376,13 @@ export default function App() {
               <div className="fly-entry" key={f.id}>
                 <button
                   className={`fly-item ${stats.selectedFly === f.id ? "selected" : ""}`}
-                  aria-label={`Select fly ${f.id}`}
+                  aria-label={`Select fly ${f.id}: ${flyLabel(f.id)}`}
                   aria-pressed={stats.selectedFly === f.id}
-                  title={`Fly ${f.id}`}
+                  title={`${flyLabel(f.id)} · Fly ${f.id}`}
                   onClick={() => world.current?.selectFly(f.id)}
                 >
                   <Bug size={19} style={{ color: f.color }} />
-                  <span>{String(f.id).padStart(2, "0")}</span>
+                  <span>{flyLabel(f.id)}</span>
                   {stats.selectedFly === f.id && (
                     <span
                       className="fly-selected-dot"
@@ -602,6 +604,23 @@ export default function App() {
                 )}
                 {tab === "environment" && (
                   <>
+                    <section
+                      className={`matrix-section panic-control ${options.panic ? "active" : ""}`}
+                    >
+                      <div
+                        className="setting-row"
+                        title="Burning walls add heat and light and trigger faster escape flight."
+                      >
+                        <span>
+                          <Flame size={17} /> Panic mode
+                        </span>
+                        <Toggle
+                          label="Panic mode"
+                          checked={options.panic}
+                          onChange={() => set("panic", !options.panic)}
+                        />
+                      </div>
+                    </section>
                     <section className="matrix-section">
                       <h3>
                         <Sun size={15} /> Light{" "}
@@ -645,7 +664,10 @@ export default function App() {
                         <span>
                           <Thermometer size={14} /> Temperature
                         </span>
-                        <span>{options.temperature}°C</span>
+                        <span>
+                          {options.temperature}°C
+                          {options.panic ? " + fire" : ""}
+                        </span>
                       </label>
                       <input
                         aria-label="Room temperature"

@@ -14,6 +14,7 @@ export class MatrixBackdrop {
   private drops: number[] = [];
   private reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   private wasReduced = this.reducedMotion.matches;
+  private panic = false;
 
   constructor() {
     this.context = this.canvas.getContext("2d")!;
@@ -29,7 +30,9 @@ export class MatrixBackdrop {
     ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.font = `${CELL}px monospace`;
-    ctx.fillStyle = `rgb(0, ${Math.round(110 + this.brightness * 145)}, 0)`;
+    ctx.fillStyle = this.panic
+      ? "rgb(255, 42, 12)"
+      : `rgb(0, ${Math.round(110 + this.brightness * 145)}, 0)`;
     this.drops.forEach((row, column) => {
       ctx.fillText(Math.random() < 0.5 ? "0" : "1", column * CELL, row * CELL);
       // Vary the off-screen wait, so columns restart independently.
@@ -38,7 +41,15 @@ export class MatrixBackdrop {
     });
   }
 
-  update(time: number, daylight: number, width: number, height: number) {
+  update(
+    time: number,
+    daylight: number,
+    width: number,
+    height: number,
+    panic = false,
+  ) {
+    const modeChanged = panic !== this.panic;
+    this.panic = panic;
     const tick = Math.floor(time / FRAME_SECONDS);
     const reduced = this.reducedMotion.matches;
     width = Math.max(1, Math.round(width));
@@ -47,6 +58,7 @@ export class MatrixBackdrop {
     this.brightness = THREE.MathUtils.clamp(daylight, 0, 1);
     if (
       this.previous < 0 ||
+      modeChanged ||
       tick < this.previous ||
       width !== this.canvas.width ||
       height !== this.canvas.height ||

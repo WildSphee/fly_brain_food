@@ -165,6 +165,15 @@ entirely. Stated plainly so no one credits them to the connectome:
   heading, fullness, energy, cruise height, pace, and phase. Reset reproduces them.
 * **Thermal avoidance is a hard-coded rule** reading the raw sensor: above 0.25 heat
   or 0.3 cold the controller adds a turn directly, without consulting the TRNs.
+* **Panic mode** adds wall firelight and a thermal field (12°C throughout the
+  room, plus up to 16°C near the two visible burning walls). Each fly samples
+  this field; the selected fly supplies the shared circuit's heat/light inputs.
+  A game controller interrupts feeding, boosts forward drive, and steers toward
+  cooler space with erratic altitude and heading changes. This escape reflex is
+  engineered, not an experimentally validated neural fear response. Silence still
+  suppresses autonomous drive, and pause freezes flight and fire animation.
+  Turning panic off removes its added heat/light and restores green rain without
+  overwriting normal environment settings or undoing damage already sustained.
 * At **10% hunger** the controller follows finite differences of the local odor
   field horizontally and vertically, gated by nonzero neural forward drive.
   It uses unsaturated plume samples so gradients survive close to food. Seeking

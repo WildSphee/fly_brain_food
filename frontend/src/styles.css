@@ -2308,6 +2308,17 @@ kbd {
   align-items: center;
   gap: 7px;
 }
+.panic-control.active .setting-row {
+  color: #ff987e;
+}
+.panic-control.active .toggle.on {
+  background: #ae3528;
+  border-color: #f16a4e;
+  box-shadow: 0 0 12px #ed492d40;
+}
+.panic-control.active .toggle.on span {
+  background: #ffe1d4;
+}
 .matrix-section .slider-label {
   font-size: 11px;
   margin: 0 0 14px;

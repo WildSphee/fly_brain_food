@@ -19,6 +19,7 @@ export interface Options {
   temperature: number;
   sunlight: number;
   stove: boolean;
+  panic: boolean;
   fridge: boolean;
   lamp: boolean;
   windowOpen: boolean;
@@ -105,6 +106,7 @@ export const initialOptions: Options = {
   temperature: 24,
   sunlight: 0.8,
   stove: true,
+  panic: false,
   fridge: true,
   lamp: false,
   windowOpen: true,

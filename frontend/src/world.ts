@@ -5,6 +5,7 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import { buildKitchen, model } from "./kitchen";
 import type { Kitchen } from "./kitchen";
 import { MatrixBackdrop } from "./matrix";
+import { PanicFire, wallFireExposure } from "./panic";
 import { FlyParticles } from "./particles";
 import { moveColliders } from "./collisions";
 import { loadFlyModel, makeFly } from "./fly";
@@ -113,6 +114,7 @@ export class KitchenWorld {
   private marker: THREE.Mesh;
   private particles: FlyParticles;
   private backdrop = new MatrixBackdrop();
+  private panicFire: PanicFire;
   private foodMeshes = new Map<number, THREE.Group>();
   private foodColliders = new Map<number, RAPIER.Collider>();
   private raf = 0;
@@ -212,6 +214,7 @@ export class KitchenWorld {
     this.controls.maxPolarAngle = Math.PI * 0.49;
     this.controls.update();
     this.kitchen = buildKitchen(this.scene, this.physics, RAPIER);
+    this.panicFire = new PanicFire(this.scene);
     this.particles = new FlyParticles(this.scene);
     this.addFly();
     this.addFly();
@@ -730,7 +733,8 @@ export class KitchenWorld {
           (0.18 + 0.75 * Math.exp(-((x - 0.6) ** 2 / 5 + (z + 1) ** 2 / 8))) +
         (this.options.lamp
           ? 0.7 / (1 + (x - 0.1) ** 2 + (y - 2.5) ** 2 + (z - 0.5) ** 2)
-          : 0),
+          : 0) +
+        (this.options.panic ? 0.5 + wallFireExposure(x, z) * 0.45 : 0),
     );
   }
   private temperatureAt(x: number, y: number, z: number) {
@@ -741,6 +745,7 @@ export class KitchenWorld {
       : 0;
     return (
       this.options.temperature +
+      (this.options.panic ? 12 + wallFireExposure(x, z) * 16 : 0) +
       hot +
       cold +
       this.day() *
@@ -792,6 +797,7 @@ export class KitchenWorld {
       targetY = p.y,
       feeding = false;
     const hunger = 100 - this.stomach;
+    const panicking = this.options.panic && !this.options.silenced;
     if (hunger >= SEEK_HUNGER) this.agent.seekingFood = true;
     else if (hunger <= SATISFIED_HUNGER) this.agent.seekingFood = false;
     const canEat =
@@ -809,7 +815,28 @@ export class KitchenWorld {
     targetY =
       this.agent.cruiseHeight +
       Math.sin(this.elapsed * 0.55 * this.agent.pace + this.agent.phase) * 0.3;
-    if (this.agent.seekingFood && drive > 0.01) {
+    if (panicking) {
+      // Gameplay escape reflex; real heat/light inputs still reach the circuit.
+      drive = Math.max(0.8, drive) * 1.9;
+      const sample = 0.2;
+      const gx =
+        this.temperatureAt(p.x + sample, p.y, p.z) -
+        this.temperatureAt(p.x - sample, p.y, p.z);
+      const gz =
+        this.temperatureAt(p.x, p.y, p.z + sample) -
+        this.temperatureAt(p.x, p.y, p.z - sample);
+      const heading = Math.atan2(-gx, -gz) - this.yaw;
+      turn =
+        clamp(Math.atan2(Math.sin(heading), Math.cos(heading)) * 3, -3.5, 3.5) +
+        Math.sin(this.elapsed * 4 + this.agent.phase) * 1.1;
+      targetY = clamp(
+        this.agent.cruiseHeight +
+          Math.sin(this.elapsed * 2.6 + this.agent.phase) * 0.4,
+        1.5,
+        2.8,
+      );
+    }
+    if (!panicking && this.agent.seekingFood && drive > 0.01) {
       // Engineered local plume following, not a claim of neural olfactory navigation.
       // Unsaturated samples preserve the gradient close to overlapping food plumes.
       const sample = 0.16;
@@ -837,6 +864,7 @@ export class KitchenWorld {
     // The shared brain may be tasting nothing at the selected fly's position.
     feeding =
       !!nearby &&
+      !panicking &&
       canEat &&
       !this.options.silenced &&
       (this.motor.feeding > 0.05 || this.motor.forward > 0.01);
@@ -859,6 +887,7 @@ export class KitchenWorld {
         this.collider,
         undefined,
         (collider) =>
+          panicking ||
           !this.agent.seekingFood ||
           ![...this.foodColliders.values()].some(
             (food) => food.handle === collider.handle,
@@ -869,7 +898,7 @@ export class KitchenWorld {
         drive *= 0.35;
         targetY = Math.max(targetY, p.y + 0.12);
       }
-      if (this.sensors.heat > 0.25 || this.sensors.cold > 0.3)
+      if (!panicking && (this.sensors.heat > 0.25 || this.sensors.cold > 0.3))
         turn += 1.8 * drive;
     }
     const canFly = this.energy > 1 && drive > 0.005 && !feeding;
@@ -895,9 +924,11 @@ export class KitchenWorld {
         : this.options.silenced
           ? "Neurons silenced"
           : canFly
-            ? this.agent.seekingFood
-              ? "Seeking food"
-              : "Exploring"
+            ? panicking
+              ? "Panicking"
+              : this.agent.seekingFood
+                ? "Seeking food"
+                : "Exploring"
             : this.landed
               ? "Resting"
               : "Landing";
@@ -935,7 +966,8 @@ export class KitchenWorld {
   private hurt(fly: FlyAgent, amount: number) {
     if (amount <= 0 || fly.energy <= 0) return;
     fly.energy = clamp(fly.energy - amount, 0, 100);
-    fly.behavior = "Hurt";
+    fly.behavior =
+      this.options.panic && !this.options.silenced ? "Panicking" : "Hurt";
     if (fly.hurtCooldown <= 0) {
       this.particles.emit("hurt", fly.body.translation());
       fly.hurtCooldown = 0.3;
@@ -1133,7 +1165,9 @@ export class KitchenWorld {
       daylight,
       this.renderer.domElement.clientWidth,
       this.renderer.domElement.clientHeight,
+      this.options.panic,
     );
+    this.panicFire.update(this.options.panic, this.elapsed);
     this.scene.environmentIntensity =
       daylight * 0.28 + (this.options.lamp ? 0.08 : 0);
     this.kitchen.sun.intensity = daylight * 2.8;
@@ -1141,7 +1175,10 @@ export class KitchenWorld {
     this.kitchen.sun.position.x =
       5 * Math.cos(((this.options.hour - 6) / 12) * Math.PI);
     this.kitchen.ambient.intensity =
-      0.018 + daylight * 0.95 + (this.options.lamp ? 0.1 : 0);
+      0.018 +
+      daylight * 0.95 +
+      (this.options.lamp ? 0.1 : 0) +
+      (this.options.panic ? 0.18 : 0);
     this.kitchen.lamp.intensity = this.options.lamp ? 7 : 0;
     this.kitchen.glow.visible = this.options.stove;
     this.kitchen.flames.visible = this.options.stove;
@@ -1166,13 +1203,18 @@ export class KitchenWorld {
     this.kitchen.odor.visible = this.options.overlay === "odor";
     this.kitchen.lightField.visible =
       this.options.overlay === "light" &&
-      (daylight > 0.02 || this.options.lamp);
+      (daylight > 0.02 || this.options.lamp || this.options.panic);
     this.kitchen.windowPane.rotation.y = this.options.windowOpen ? -0.55 : 0;
     moveColliders(this.kitchen.movingColliders);
     const skyMaterial = this.kitchen.sky.material as THREE.MeshStandardMaterial;
     skyMaterial.color.set("#080d16").lerp(new THREE.Color("#a6bfcc"), daylight);
     skyMaterial.emissive.set("#b8ccd9");
     skyMaterial.emissiveIntensity = daylight * 0.35;
+    if (this.options.panic) {
+      skyMaterial.color.lerp(new THREE.Color("#a52b17"), 0.85);
+      skyMaterial.emissive.set("#ff4015");
+      skyMaterial.emissiveIntensity = 0.45;
+    }
     this.renderer.setClearColor(
       new THREE.Color("#06090f").lerp(new THREE.Color("#929da3"), daylight),
     );
@@ -1254,6 +1296,7 @@ export class KitchenWorld {
       this.cancelDrag,
     );
     this.scene.traverse((n) => {
+      if (n instanceof THREE.InstancedMesh) n.dispose();
       if (n instanceof THREE.Mesh || n instanceof THREE.Line) {
         n.geometry.dispose();
         const materials = Array.isArray(n.material) ? n.material : [n.material];
