@@ -64,3 +64,28 @@ license texts are stored under `frontend/public/fonts`. No font CDN is contacted
 
 Three.js and Rapier supply rendering and rigid-body dynamics; their packages retain
 their upstream license files in `node_modules`. Data attribution is in `docs/science.md`.
+
+## Realistic food
+
+The interactive food now uses locally vendored, textured source models:
+
+| Food | Source | License |
+|---|---|---|
+| Apple | [3D Apple 002](https://ambientcg.com/view?id=3DApple002), Lennart Demes / ambientCG | CC0 1.0 |
+| Bread | [3D Bread 011](https://ambientcg.com/view?id=3DBread011), Lennart Demes / ambientCG | CC0 1.0 |
+| Banana | [YCB Object and Model Set](https://ycb-benchmarks.s3.amazonaws.com/index.html), Google scanner, `011_banana/google_16k` | CC BY 4.0 |
+| Cheese | [Food Pack](https://opengameart.org/content/food-pack-0), yd, cut-wheel mesh `Circle.004` | CC0 1.0 |
+
+Apple, bread, and banana are scanned meshes; cheese is an authored textured model.
+Original UVs and color textures are retained, with original OpenGL normal maps
+for apple, bread, and cheese, and the apple's roughness map. The models use standard
+PBR materials and bypass the kitchen's generic plaster texture decoration.
+Materials and geometry are cloned per serving so spoilage and removal stay independent.
+
+`python3 scripts/fetch_food_models.py` reproduces the GLBs using Blender 5.0.x with
+NumPy and Pillow available to Blender (Ubuntu packages: `blender python3-numpy
+python3-pil`). It preserves source geometry, converts axes to glTF, selects one
+cheese mesh, and embeds textures into each GLB. Exact source and output SHA-256
+hashes, triangle counts, credits, and adaptations are recorded in
+`frontend/public/models/food-manifest.json`. License notices are in
+`frontend/public/models/food-LICENSE.md`. No runtime download or account is needed.

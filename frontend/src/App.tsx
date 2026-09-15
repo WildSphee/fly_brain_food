@@ -63,12 +63,6 @@ const initialStats: WorldStats = {
   hour: 10.5,
 };
 const num = (value: number) => new Intl.NumberFormat("en-US").format(value);
-const time = (seconds: number) =>
-  `${Math.floor(seconds / 60)
-    .toString()
-    .padStart(2, "0")}:${Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, "0")}`;
 const hour = (h: number) =>
   `${Math.floor(h).toString().padStart(2, "0")}:${Math.floor((h % 1) * 60)
     .toString()
@@ -524,7 +518,6 @@ export default function App() {
                             <Play size={16} />
                           )}
                         </button>
-                        <span className="sim-time">{time(stats.elapsed)}</span>
                         <button
                           className="icon-button"
                           aria-label="Reset experiment"

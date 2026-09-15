@@ -2645,7 +2645,7 @@ kbd {
   grid-template-columns: repeat(3, 1fr);
 }
 .matrix-network {
-  z-index: 5;
+  z-index: 7; /* Keep the circuit above the mobile settings panel (z-index: 6). */
   background: #070e0bf5;
 }
 .anatomy-view {
@@ -2865,4 +2865,141 @@ kbd {
 .anatomy-connections button small {
   color: #a6b99a;
   font-family: var(--mono);
+}
+
+.anatomy-class-summary {
+  display: block;
+  margin-top: 5px;
+  color: #b7a2d5;
+}
+.anatomy-navigation {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  width: 120px;
+  padding: 0 5px 8px;
+  border: 1px solid #bedca41c;
+  border-radius: 12px;
+  background: #0a160fd9;
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+.anatomy-navigation svg {
+  display: block;
+  width: 108px;
+  height: 108px;
+}
+.anatomy-axis-tips [role="button"] {
+  cursor: pointer;
+  outline: none;
+}
+.anatomy-axis-tips [role="button"]:hover circle,
+.anatomy-axis-tips [role="button"]:focus-visible circle {
+  fill: #344c3a;
+  stroke-width: 2;
+}
+.anatomy-axis-tips text {
+  font: 10px var(--mono);
+  pointer-events: none;
+}
+.anatomy-view-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.anatomy-view-buttons button {
+  font-size: 10px;
+  padding: 5px 2px;
+  border-radius: 4px;
+  color: #b0c3a8;
+}
+.anatomy-view-buttons button:hover {
+  background: #b6e79816;
+}
+.anatomy-view-buttons button[aria-pressed="true"] {
+  background: #b6e79825;
+  color: #d8f5c5;
+}
+.anatomy-navigation > span {
+  display: block;
+  margin-top: 8px;
+  color: #839b7d;
+  font: 8px var(--mono);
+}
+.anatomy-sidebar {
+  width: 230px;
+  flex-shrink: 0;
+}
+.anatomy-neurons button em {
+  display: block;
+  margin-top: 3px;
+  color: #8b9b85;
+  font-size: 9px;
+  font-style: normal;
+}
+.neuron-class {
+  display: inline-block;
+  font: 10px var(--mono);
+  margin: 2px 0 10px;
+}
+.neuron-role {
+  padding: 10px;
+  border: 1px solid #b7d39d1f;
+  border-radius: 7px;
+  background: #b7d39d08;
+}
+.neuron-role strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d0e2c2;
+  font-weight: 500;
+}
+.anatomy-sidebar .neuron-role p {
+  margin: 6px 0;
+  line-height: 1.6;
+  font-size: 11px;
+}
+.neuron-role > small {
+  display: block;
+  color: #8fa283;
+  font-size: 9px;
+}
+.neuron-role a {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #b5d89f;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.anatomy-sidebar .neuron-role .neuron-side-note {
+  border-top: 1px solid #b7d39d1f;
+  padding-top: 7px;
+  margin-bottom: 0;
+  font-size: 10px;
+}
+@media (max-width: 800px) {
+  .anatomy-sidebar {
+    width: 100%;
+  }
+  .anatomy-navigation {
+    top: 6px;
+    right: 6px;
+    width: 98px;
+    padding: 0 4px 6px;
+  }
+  .anatomy-navigation svg {
+    width: 88px;
+    height: 88px;
+  }
+  .anatomy-view-buttons button {
+    padding: 4px 1px;
+    font-size: 9px;
+  }
+  .anatomy-navigation > span {
+    font-size: 7px;
+    margin-top: 5px;
+  }
 }

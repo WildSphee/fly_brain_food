@@ -254,3 +254,54 @@ hash and the hash of the circuit it accompanies. The view works offline after
 installation. Data: [MaleCNS](https://male-cns.janelia.org/download/),
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), FlyEM / HHMI Janelia,
 University of Cambridge, MRC LMB, and Google Research.
+
+### Navigation and functional annotations
+
+The orientation gizmo and six snap directions use **display axes**, not anatomical
+anterior/posterior or the fly's left/right. Snapping preserves the current orbit
+center and distance. Reset restores the centered front view and clears selection.
+
+The anatomical sample contains **6 descending neurons and 38 other neurons**;
+class labels come directly from the snapshot, not from neuron-name prefixes.
+Descending neurons carry signals from brain to ventral nerve cord; this does not
+imply a one-neuron/one-leg actuator mapping. The snapshot's L/R annotation is
+anatomical side. The full circuit contains 259 descending neurons out of 4,390.
+
+`frontend/src/neuronRoles.ts` provides literature context separately from circuit
+class/modality annotations and simulated activity. The references describe types
+or families in experimental animals, not a functional measurement of the displayed
+MaleCNS body:
+
+- DNp01 (giant fiber): rapid escape takeoff. DNp04: coordinated escape takeoff;
+  coactivation with DNp02 promotes backward body shifts and takeoff. This is not
+  evidence that DNp04 alone commands backward movement or a particular leg.
+  [Dombrovski et al., Nature 2023](https://www.nature.com/articles/s41586-022-05562-8).
+- DNg74_a: **family-level** evidence for inhibitory input to leg sensory-feedback
+  circuitry. The cited DNg74 study does not establish an independent `_a` subtype
+  or single-leg assignment.
+  [Dallmann et al., Nature 2025](https://faculty.washington.edu/tuthill/docs/Dallmann_et_al-2025-Nature.pdf).
+- pIP1 and DNp103: specific motor roles remain **unassigned in this viewer's
+  reviewed sources**. No claim that all literature lacks a role; pIP1 must not
+  be confused with the song-related pIP10.
+
+These labels do not alter the simulation's motor bridge or make its behavior
+experimentally validated. Generic sensory and interneuron descriptions express
+circuit class, not a demonstrated behavior of every member.
+
+The viewer also labels all **6 ascending neurons** (the other 32 are sensory or
+local neurons). Ascending roles describe signals carried toward the brain, not
+single-leg motor control:
+
+- AN05B102a/c and AN05B023a: family-level connectivity evidence for input from
+  putative contact-pheromone taste neurons. This is a proposed sensory pathway,
+  not a demonstrated behavioral command for every subtype. See Figure 7 in the
+  [MaleCNS study by Berg et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC12636603/)
+  (preprint).
+- AN13B002: connectivity from body chemosensory groups SNch07, SNch09, and SNch12;
+  specific taste quality and behavioral effect remain unassigned in the viewer.
+  See the chemosensory analysis in
+  [Marin et al., MANC annotation study](https://elifesciences.org/reviewed-preprints/97766).
+
+These annotations retain the distinction between measured wiring, family-level
+inferences, and experimentally established functions. The elapsed simulation clock
+still drives physics internally; its counter has been removed from the UI.

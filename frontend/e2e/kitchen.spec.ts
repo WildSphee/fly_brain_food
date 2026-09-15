@@ -11,6 +11,7 @@ test("clean layout, cameras, speed, pause, and minimizing", async ({
   page,
 }) => {
   const errors = watchConsole(page);
+  await inspectWorld(page);
   await openHabitat(page);
   await expect(page).toHaveTitle("Fly Matrix");
   await expect(page.getByText("Experiment log")).toHaveCount(0);
@@ -35,10 +36,12 @@ test("clean layout, cameras, speed, pause, and minimizing", async ({
   await expect(
     page.getByRole("button", { name: "Resume simulation" }),
   ).toBeVisible();
-  await page.waitForTimeout(300); // Let the final telemetry snapshot arrive.
-  const frozen = await page.locator(".sim-time").innerText();
+  await expect(page.locator(".sim-time")).toHaveCount(0);
+  const frozen = await page.evaluate(() => (window as any).__world.elapsed);
   await page.waitForTimeout(1100);
-  expect(await page.locator(".sim-time").innerText()).toBe(frozen);
+  expect(await page.evaluate(() => (window as any).__world.elapsed)).toBe(
+    frozen,
+  );
   await page.getByRole("button", { name: "Minimize settings" }).click();
   await expect(page.getByRole("tablist")).toHaveCount(0);
   await page.getByRole("button", { name: "Expand settings" }).click();
@@ -83,12 +86,21 @@ test("drag a fly and apple; direct appliance clicks update settings and visuals"
   await page.getByRole("button", { name: "Pause simulation" }).click();
   await page.getByRole("button", { name: "Orbit camera", exact: true }).click();
   const flyPos = await page.evaluate(() => {
-    const p = (window as any).__world.body.translation();
+    const w = (window as any).__world;
+    // Shader loading takes different amounts of simulation time across machines.
+    // Start the drag above the island, clear of the overlay panels and props.
+    w.body.setTranslation({ x: 0, y: 1.8, z: 1.6 }, true);
+    w.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    const p = w.body.translation();
+    w.agent.visual.group.position.set(p.x, p.y + 0.045, p.z);
     return [p.x, p.y + 0.045, p.z];
   });
   const fly = await point(page, flyPos);
   await page.mouse.move(fly.x, fly.y);
   await page.mouse.down();
+  expect(await page.evaluate(() => (window as any).__world.drag?.fly?.id)).toBe(
+    1,
+  );
   await page.mouse.move(fly.x + 70, fly.y - 30, { steps: 10 });
   await page.mouse.up();
   const moved = await page.evaluate(() => {

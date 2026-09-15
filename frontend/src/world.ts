@@ -645,7 +645,7 @@ export class KitchenWorld {
       if (!this.foodMeshes.has(f.id)) {
         const obj = await model(
           this.scene,
-          f.kind,
+          `food-${f.kind}`,
           [f.x, f.y, f.z],
           f.kind === "banana" ? 0.47 : f.kind === "bread" ? 0.4 : 0.25,
           f.id * 0.8,

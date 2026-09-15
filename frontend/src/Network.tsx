@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { Telemetry } from "./types";
+import {
+  AnatomyNavigation,
+  anatomyViews,
+  updateAnatomyGizmo,
+  type AnatomyView,
+} from "./AnatomyNavigation";
+import { neuronClass, neuronRole } from "./neuronRoles";
 
 interface Neuron {
   id: string;
@@ -34,7 +41,10 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
   const [anatomy, setAnatomy] = useState<Anatomy | null>(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<AnatomyView | null>("Front");
   const host = useRef<HTMLDivElement>(null);
+  const gizmo = useRef<SVGSVGElement>(null);
+  const snapView = useRef<(view: AnatomyView) => void>(() => {});
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const telemetryRef = useRef(telemetry);
@@ -116,10 +126,42 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
       scene.add(line);
       return line;
     });
+    const updateNavigation = () => {
+      if (gizmo.current) updateAnatomyGizmo(gizmo.current, camera);
+      const direction = camera.position
+        .clone()
+        .sub(controls.target)
+        .normalize();
+      const aligned = anatomyViews.find(
+        (v) => direction.dot(new THREE.Vector3(...v.direction)) > 0.999999,
+      );
+      setActiveView(aligned?.name || null);
+    };
+    controls.addEventListener("change", updateNavigation);
+    const stopInertia = () => {
+      // Flush any pending orbit/pan deltas before setting an exact new pose.
+      controls.enableDamping = false;
+      controls.update();
+    };
+    snapView.current = (view) => {
+      const target = controls.target.clone();
+      const distance = camera.position.distanceTo(target);
+      stopInertia();
+      controls.target.copy(target);
+      const direction = anatomyViews.find((v) => v.name === view)!.direction;
+      camera.position
+        .copy(target)
+        .addScaledVector(new THREE.Vector3(...direction), distance);
+      // OrbitControls safely offsets polar views by epsilon to keep orbit usable.
+      controls.update();
+      controls.enableDamping = true;
+    };
     resetView.current = () => {
-      camera.position.set(0.1, 0, 3.4);
+      stopInertia();
+      camera.position.set(0, 0, 3.4);
       controls.target.set(0, 0, 0);
       controls.update();
+      controls.enableDamping = true;
     };
     resetView.current();
     const resize = () => {
@@ -179,7 +221,10 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      controls.removeEventListener("change", updateNavigation);
       controls.dispose();
+      snapView.current = () => {};
+      resetView.current = () => {};
       renderer.domElement.removeEventListener("pointerdown", pointerDown);
       renderer.domElement.removeEventListener("pointerup", pick);
       lines.forEach((line) => {
@@ -197,6 +242,13 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
       </div>
     );
   const neuron = anatomy.neurons.find((n) => n.id === selected);
+  const role = neuron ? neuronRole(neuron) : null;
+  const descendingCount = anatomy.neurons.filter(
+    (n) => n.group === "descending_neuron",
+  ).length;
+  const ascendingCount = anatomy.neurons.filter(
+    (n) => n.group === "ascending_neuron",
+  ).length;
   const activity = telemetry?.activity.find((n) => n.id === selected);
   const neuronById = new Map(anatomy.neurons.map((n) => [n.id, n]));
   const partners = selected
@@ -211,6 +263,11 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
           <p>
             {anatomy.neurons.length} real neurons from the 4,390-neuron circuit
             · {anatomy.edges.length} measured connections in this sample
+            <span className="anatomy-class-summary">
+              {descendingCount} descending · {ascendingCount} ascending ·{" "}
+              {anatomy.neurons.length - descendingCount - ascendingCount}{" "}
+              sensory & local
+            </span>
           </p>
         </div>
         <button
@@ -225,6 +282,11 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
       </div>
       <div className="anatomy-content">
         <div className="anatomy-canvas" ref={host}>
+          <AnatomyNavigation
+            svgRef={gizmo}
+            active={activeView}
+            onSnap={(view) => snapView.current(view)}
+          />
           <span className="anatomy-hint">
             Drag to rotate · Scroll to zoom · Click a branch
           </span>
@@ -237,6 +299,35 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
                 <h3>
                   {neuron.type} <small>{neuron.side}</small>
                 </h3>
+                <span
+                  className="neuron-class"
+                  style={{ color: neuronColor(neuron) }}
+                >
+                  {neuronClass(neuron.group)}
+                </span>
+                {role && (
+                  <div className="neuron-role">
+                    <strong>{role.title}</strong>
+                    <p>{role.description}</p>
+                    <small>{role.evidence}</small>
+                    {role.source && (
+                      <a
+                        href={role.source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {role.source.label} ↗
+                      </a>
+                    )}
+                    {["descending_neuron", "ascending_neuron"].includes(
+                      neuron.group,
+                    ) && (
+                      <p className="neuron-side-note">
+                        L/R marks anatomical side, not control of a single leg.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <p>
                   Body ID {neuron.id}
                   <br />
@@ -291,7 +382,10 @@ export function Network({ telemetry }: { telemetry: Telemetry | null }) {
                 onClick={() => setSelected(selected === n.id ? null : n.id)}
               >
                 <i style={{ background: neuronColor(n) }} />
-                <span>{n.type}</span>
+                <span>
+                  {n.type}
+                  <em>{neuronClass(n.group)}</em>
+                </span>
                 <small>{n.side}</small>
               </button>
             ))}

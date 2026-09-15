@@ -87,6 +87,14 @@ export class KitchenMaterials {
     object.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return;
       node.geometry = node.geometry.clone();
+      if (name.startsWith("food-")) {
+        // Keep authored UVs and scan textures. Each food owns its material so
+        // spoilage tint and disposal never mutate another serving or the cache.
+        node.material = Array.isArray(node.material)
+          ? node.material.map((material) => material.clone())
+          : node.material.clone();
+        return;
+      }
       projectUV(node, name === "apple" || name === "banana" ? 0.12 : 0.8);
       const decorate = (original: THREE.MeshStandardMaterial) => {
         const label = original.name.toLowerCase();

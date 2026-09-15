@@ -1,0 +1,63 @@
+{
+  "converter": "Blender 5.0.1",
+  "models": {
+    "apple": {
+      "source": "https://ambientcg.com/view?id=3DApple002",
+      "author": "Lennart Demes / ambientCG",
+      "license": "CC0-1.0",
+      "file": "food-apple.glb",
+      "triangles": 10000,
+      "bytes": 1861248,
+      "sha256": "1a7cf9d7a2ecb6bd973660b5ef2be00b5318a84f6d598129a7b4723bdc7a8087",
+      "changes": "Selected source mesh; coordinate conversion; standard PBR material with original UVs/textures; self-contained GLB export."
+    },
+    "bread": {
+      "source": "https://ambientcg.com/view?id=3DBread011",
+      "author": "Lennart Demes / ambientCG",
+      "license": "CC0-1.0",
+      "file": "food-bread.glb",
+      "triangles": 5000,
+      "bytes": 2621880,
+      "sha256": "b29dbe341078717aff2219842178af72b29530057e763a9d53e6bafc943da286",
+      "changes": "Selected source mesh; coordinate conversion; standard PBR material with original UVs/textures; self-contained GLB export."
+    },
+    "banana": {
+      "source": "https://ycb-benchmarks.s3.amazonaws.com/index.html",
+      "author": "YCB Object and Model Set / Google scanner",
+      "license": "CC-BY-4.0",
+      "file": "food-banana.glb",
+      "triangles": 16384,
+      "bytes": 4346652,
+      "sha256": "5f7d88bf14864d7d70e30552142176ea1e9e00185f5cb493546aae195f85c9a2",
+      "changes": "Selected source mesh; coordinate conversion; standard PBR material with original UVs/textures; self-contained GLB export."
+    },
+    "cheese": {
+      "source": "https://opengameart.org/content/food-pack-0",
+      "author": "yd",
+      "license": "CC0-1.0",
+      "file": "food-cheese.glb",
+      "triangles": 420,
+      "bytes": 1028208,
+      "sha256": "fe9ca6754a1ccb6fb81de7b182825dd7404bc3bcfa341a29281e23b4fb125e9a",
+      "changes": "Selected source mesh; coordinate conversion; standard PBR material with original UVs/textures; self-contained GLB export."
+    }
+  },
+  "sources": [
+    {
+      "url": "https://ambientcg.com/get?file=3DApple002_SQ-1K-JPG.zip&download=1",
+      "sha256": "497bfeeaf2a0985ff1d88f1ded93d252baebcd946e2465b4f67f87ceaa0cb770"
+    },
+    {
+      "url": "https://ambientcg.com/get?file=3DBread011_SQ-1K-JPG.zip&download=1",
+      "sha256": "8f1c67201e36b89dff2ee7d83da874c37255912c89747edf8c171db11fcde72c"
+    },
+    {
+      "url": "https://ycb-benchmarks.s3.amazonaws.com/data/google/011_banana_google_16k.tgz",
+      "sha256": "bad03e98066dec02ea1536ff2fa58f068efa97e9dbc89fceb4418f1ec633c881"
+    },
+    {
+      "url": "https://opengameart.org/sites/default/files/foodPackOGACC0.blend",
+      "sha256": "81f883dec32a0f857fb2c2f415bdeddeb83e0233e2d433a62d6f9983b26192a0"
+    }
+  ]
+}
