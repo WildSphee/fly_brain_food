@@ -7,7 +7,10 @@ The MaleCNS connectome is an electron-microscopy reconstruction of an adult male
 rather than estimated. This project takes that wiring, treats the synapse counts as network
 weights, gives it a body with senses, and drops it into a simulated kitchen.
 
-![The habitat, the fly list, and live neural telemetry](docs/images/hero.png)
+![The habitat, the fly list and the control panel](docs/images/hero.png)
+
+A 28 second walkthrough is in [docs/video/fly-matrix.mp4](docs/video/fly-matrix.mp4): orbit,
+follow camera, fly eye, the reconstructed circuit, then back to the kitchen.
 
 The kitchen generates sensory input from its own contents and routes each signal to the
 population that would receive it in a real fly: heat and cold to thermosensory neurons, food
@@ -87,9 +90,11 @@ One backend worker; each browser gets its own neural state. No database, no LLM.
 Each fly has its own physics, energy and stomach, but there is one shared circuit: the
 selected fly supplies the sensory input and every fly receives its motor output.
 
-![Sunlight at zero with the stove lit](docs/images/night.png)
+![Sunlight at zero, lit only by the kitchen lamp and the stove](docs/images/night.png)
 
 ## Scientific scope
+
+![Live firing rates, descending-neuron output and the sensory gain control](docs/images/telemetry.png)
 
 ![44 real MaleCNS neuron skeletons in original EM coordinates](docs/images/neural-circuit.png)
 
