@@ -86,11 +86,14 @@ One backend worker; each browser gets its own neural state. No database, no LLM.
 - **Hunger** rises as the stomach empties; food seeking starts at 10%. Food rots over minutes after a meal.
 - Heat, cold, starvation and hard impacts cost energy.
 - **Record video** captures the 3D view at 30 FPS as WebM or MP4.
+- **Panic mode** sets the walls alight, floods the room with heat and firelight, and sends every fly fleeing toward cooler air.
 
 Each fly has its own physics, energy and stomach, but there is one shared circuit: the
 selected fly supplies the sensory input and every fly receives its motor output.
 
 ![Sunlight at zero, lit only by the kitchen lamp and the stove](docs/images/night.png)
+
+![Panic mode: burning walls, the rain turned red, and both flies running for cooler air](docs/images/panic.png)
 
 ## Scientific scope
 
